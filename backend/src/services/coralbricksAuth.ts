@@ -3,15 +3,18 @@ import { config } from '../config';
 import { log } from '../utils/logger';
 import { User, SupabaseAuthResponse, SupabaseTokenData, ApiResponse } from '../types';
 import { PrismaService } from './prismaService';
+import { createClient } from '@supabase/supabase-js';
 
 export class CoralBricksAuthService {
   private supabaseUrl: string;
   private supabaseAnonKey: string;
+  private supabaseServiceKey: string;
   private static prismaService: PrismaService | null = null;
 
   constructor() {
     this.supabaseUrl = config.supabaseUrl;
     this.supabaseAnonKey = config.supabaseAnonKey;
+    this.supabaseServiceKey = config.supabaseServiceRoleKey;
     
     // Use singleton pattern for PrismaService
     if (!CoralBricksAuthService.prismaService) {
@@ -88,120 +91,79 @@ export class CoralBricksAuthService {
    * Get authentication token from Supabase using email and password
    */
   async getSupabaseToken(email: string, password: string): Promise<ApiResponse<SupabaseTokenData>> {
+    
     try {
-      if (!this.supabaseUrl || !this.supabaseAnonKey) {
-        return {
-          success: false,
-          error: 'Supabase configuration missing',
-          code: 'CONFIG_ERROR'
-        };
-      }
-
-      const authUrl = `${this.supabaseUrl}/auth/v1/token?grant_type=password`;
-      
-      const headers = {
-        'Content-Type': 'application/json',
-        'apikey': this.supabaseAnonKey,
-        'Authorization': `Bearer ${this.supabaseAnonKey}`
-      };
-      
-      const payload = {
-        email,
-        password
-      };
-      
       log.info(`Attempting Supabase authentication for email: ${email}`);
       
-      const response = await axios.post<SupabaseAuthResponse>(authUrl, payload, { 
-        headers, 
-        timeout: 30000 
+      // Use Supabase client for authentication instead of direct API calls
+      const supabase = createClient(this.supabaseUrl, this.supabaseServiceKey);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
       
-      if (response.status === 200) {
-        const data = response.data;
-        const token = data.access_token;
+      if (error) {
+        log.error(`Supabase authentication failed: ${error.message}`);
+        return {
+          success: false,
+          error: error.message,
+          code: 'SUPABASE_AUTH_ERROR'
+        };
+      }
+      
+      if (data.user && data.session) {
+        const token = data.session.access_token;
         const userInfo = data.user;
         
-        if (token && userInfo) {
-          // Get user profile to fetch cbid
-          const profileResult = await this.getUserProfileByUserId(userInfo.id);
+        // Get user profile to fetch cbid
+        const profileResult = await this.getUserProfileByUserId(userInfo.id);
+        
+        if (profileResult.success && profileResult.data) {
+          const tokenData: SupabaseTokenData = {
+            token: token,
+            user_id: userInfo.id,
+            email: userInfo.email || email,
+            role: userInfo.role || 'authenticated',
+            cbid: profileResult.data.cbid
+          };
           
-          if (profileResult.success && profileResult.data) {
-            const tokenData: SupabaseTokenData = {
-              token,
-              user_id: userInfo.id,
-              email: userInfo.email,
-              role: 'authenticated',
-              cbid: profileResult.data.cbid
-            };
-            
-            log.info(`Successfully authenticated user: ${userInfo.email} with cbid: ${profileResult.data.cbid}`);
-            return {
-              success: true,
-              data: tokenData
-            };
-          } else {
-            return {
-              success: false,
-              error: 'User authenticated but profile not found',
-              code: 'PROFILE_NOT_FOUND'
-            };
-          }
+          log.info(`Supabase authentication successful for email: ${email}, cbid: ${profileResult.data.cbid}`);
+          
+          return {
+            success: true,
+            data: tokenData
+          };
         } else {
+          log.error(`Profile not found for user: ${userInfo.id}`);
           return {
             success: false,
-            error: 'No access token or user info in response',
-            code: 'INVALID_RESPONSE'
+            error: 'User authenticated but profile not found',
+            code: 'PROFILE_NOT_FOUND',
+            data: {
+              token: token,
+              user_id: userInfo.id,
+              email: userInfo.email || email,
+              role: userInfo.role || 'authenticated',
+              cbid: BigInt(0) // Use BigInt(0) as placeholder when profile not found
+            }
           };
         }
       } else {
-        try {
-          const errorData = response.data as any;
-          log.error(`Supabase authentication error: ${JSON.stringify(errorData)}`);
-          const errorMsg = errorData?.error_description || errorData?.error || 'Unknown error';
-          return {
-            success: false,
-            error: `Authentication failed: ${errorMsg}`,
-            code: 'AUTH_FAILED'
-          };
-        } catch {
-          return {
-            success: false,
-            error: `Authentication failed: ${response.status}`,
-            code: 'AUTH_FAILED'
-          };
-        }
+        log.error('Supabase authentication returned no user or session');
+        return {
+          success: false,
+          error: 'Authentication failed - no user data returned',
+          code: 'NO_USER_DATA'
+        };
       }
       
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        log.error(`Supabase authentication error: ${JSON.stringify(error)}`);
-        if (error.code === 'ECONNREFUSED') {
-          return {
-            success: false,
-            error: 'Connection Error: Could not connect to Supabase',
-            code: 'CONNECTION_ERROR'
-          };
-        } else if (error.code === 'ECONNABORTED') {
-          return {
-            success: false,
-            error: 'Timeout Error: Authentication request took too long',
-            code: 'TIMEOUT_ERROR'
-          };
-        } else {
-          return {
-            success: false,
-            error: `Request Error: ${error.message}`,
-            code: 'REQUEST_ERROR'
-          };
-        }
-      }
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    } catch (error: any) {
+      log.error('Supabase authentication error:', error);
       return {
         success: false,
-        error: `Unexpected Error: ${errorMessage}`,
-        code: 'UNEXPECTED_ERROR'
+        error: error.message || 'Authentication failed',
+        code: 'SUPABASE_ERROR'
       };
     }
   }

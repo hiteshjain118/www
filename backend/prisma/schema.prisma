@@ -27,7 +27,8 @@ model Profile {
   // Relations
   qboProfiles QboProfile[]
   qboProfilesSandbox QboProfileSandbox[]
-  threads Threads[]
+  threads Thread[]
+  pipelines Pipeline[]
   
   @@map("profiles")
 }
@@ -77,13 +78,56 @@ model QboProfileSandbox {
   @@map("qbo_profiles_sandbox")
 }
 
-model Threads {
+model Thread {
   cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
   ownerId                 BigInt   @map("owner_id") @db.BigInt
   createdAt               DateTime @default(now()) @map("created_at")
   
   // Relations
   owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pipelines               Pipeline[]
+  messages                Message[]
   
   @@map("threads")
+}
+
+model TableAttachment {
+  cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
+  messageId               BigInt   @map("message_id") @db.BigInt
+  createdAt               DateTime @default(now()) @map("created_at")  
+  columns                 Json    @map("columns")
+  rows                    Json    @map("rows")
+  
+  // Relations
+  message                 Message  @relation(fields: [messageId], references: [cbId], onDelete: Cascade)
+  
+  @@map("table_attachments")
+}
+
+model Message {
+  cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
+  threadId                BigInt   @map("thread_id") @db.BigInt
+  createdAt               DateTime @default(now()) @map("created_at")
+  senderId                BigInt   @map("sender_id") @db.BigInt
+  receiverId              BigInt   @map("receiver_id") @db.BigInt
+  body                    String   @map("body") @db.Text
+  
+  // Relations
+  tableAttachments        TableAttachment[]
+  thread                  Thread   @relation(fields: [threadId], references: [cbId], onDelete: Cascade)
+ 
+  @@map("messages")
+}
+
+model Pipeline {
+  cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
+  ownerId                 BigInt   @map("owner_id") @db.BigInt
+  parentThreadId          BigInt?  @map("parent_thread_id") @db.BigInt
+  createdAt               DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  parentThread            Thread?  @relation(fields: [parentThreadId], references: [cbId], onDelete: SetNull)
+  
+  @@map("pipelines")
 }

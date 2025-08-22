@@ -29,41 +29,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        console.log('Checking authentication status...');
-        
-        // Check localStorage for saved user data
-        const savedUser = localStorage.getItem('coralbricks_user');
-        if (savedUser) {
-          try {
-            const userData = JSON.parse(savedUser);
-            console.log('Found saved user in localStorage:', userData);
-            setUser(userData);
-          } catch (e) {
-            console.error('Error parsing saved user data:', e);
-            localStorage.removeItem('coralbricks_user');
-          }
+        // Check localStorage for cached user data
+        const storedUser = localStorage.getItem('coralbricks_user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log('Found cached user data:', userData);
+          setUser(userData);
         } else {
-          console.log('No saved user found in localStorage');
+          console.log('No cached user data found');
         }
         
-        // TODO: Verify with backend if needed
-        // Try to get current user from backend
-        // const response = await fetch('http://localhost:3001/auth/me', {
-        //   method: 'GET',
-        //   credentials: 'include', // Include cookies
-        // });
+        // Note: Backend validation will happen when the user actually uses the app
+        // This prevents unnecessary API calls during initial load
         
-        // if (response.ok) {
-        //   const data = await response.json();
-        //   console.log('User is authenticated:', data);
-        //   if (data.user) {
-        //     setUser(data.user);
-        //   }
-        // } else {
-        //   console.log('User is not authenticated');
-        // }
       } catch (error) {
         console.error('Error checking auth status:', error);
+        // On error, clear any cached user data to be safe
+        localStorage.removeItem('coralbricks_user');
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -119,8 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: { message: data.error || 'Signin failed' } };
       }
       
-      // Set user from backend response
-      if (data.user) {
+      // Set user from backend response (only if fully authenticated)
+      if (data.user && data.user.role !== 'pending_verification') {
         setUser(data.user);
         // Save user data to localStorage
         localStorage.setItem('coralbricks_user', JSON.stringify(data.user));

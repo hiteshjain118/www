@@ -20,7 +20,7 @@ export class ThreadsService {
    */
   async getAllThreads(ownerId: bigint): Promise<ApiResponse<Threads[]>> {
     try {
-      const threads = await this.prisma.threads.findMany({
+      const threads = await this.prisma.thread.findMany({
         where: {
           ownerId: ownerId
         },
@@ -51,7 +51,7 @@ export class ThreadsService {
    */
   async getThreadById(cbId: bigint, ownerId: bigint): Promise<ApiResponse<Threads | null>> {
     try {
-      const thread = await this.prisma.threads.findFirst({
+      const thread = await this.prisma.thread.findFirst({
         where: {
           cbId: cbId,
           ownerId: ownerId
@@ -87,7 +87,7 @@ export class ThreadsService {
    */
   async createThread(ownerId: bigint): Promise<ApiResponse<{ cbId: string }>> {
     try {
-      const newThread = await this.prisma.threads.create({
+      const newThread = await this.prisma.thread.create({
         data: {
           ownerId: ownerId
         }
