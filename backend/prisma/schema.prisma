@@ -124,6 +124,7 @@ model Pipeline {
   ownerId                 BigInt   @map("owner_id") @db.BigInt
   parentThreadId          BigInt?  @map("parent_thread_id") @db.BigInt
   createdAt               DateTime @default(now()) @map("created_at")
+  name                    String   @map("name") @db.Text
   
   // Relations
   owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)

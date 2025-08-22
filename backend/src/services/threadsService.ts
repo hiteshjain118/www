@@ -55,6 +55,16 @@ export class ThreadsService {
         where: {
           cbId: cbId,
           ownerId: ownerId
+        },
+        include: {
+          messages: {
+            orderBy: {
+              createdAt: 'asc'
+            },
+            include: {
+              tableAttachments: true
+            }
+          }
         }
       });
 
@@ -65,7 +75,7 @@ export class ThreadsService {
         };
       }
 
-      logger.info(`Retrieved thread ${cbId} for owner ${ownerId}`);
+      logger.info(`Retrieved thread ${cbId} with ${thread.messages.length} messages for owner ${ownerId}`);
       
       return {
         success: true,

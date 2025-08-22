@@ -39,10 +39,29 @@ export interface UserProfile {
   get_phone(): string;
 }
 
+export interface ThreadMessage {
+  cbId: string;
+  threadId: string;
+  senderId: string;
+  receiverId: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface Thread {
   cbId: string;
   ownerId: string;
   createdAt: string;
+  messages?: ThreadMessage[];
+}
+
+export interface Pipeline {
+  cbId: string;
+  ownerId: string;
+  parentThreadId?: string;
+  name: string;
+  createdAt: string;
+  parentThread?: Thread;
 }
 
 class ApiClient {
@@ -91,6 +110,28 @@ class ApiClient {
       return result;
     } catch (error) {
       console.error('API request error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+        code: 'NETWORK_ERROR'
+      };
+    }
+  }
+
+  async put<T>(endpoint: string, data: any): Promise<ApiResponse<T>> {
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',
@@ -158,6 +199,40 @@ class ApiClient {
 
   async createThread(cbid: string): Promise<ApiResponse<{ cbId: string }>> {
     return this.post<{ cbId: string }>(`/thread/create?cbid=${cbid}`, {});
+  }
+
+  async createMessage(threadId: string, cbid: string, body: string, receiverId?: string): Promise<ApiResponse<{ cbId: string }>> {
+    return this.post<{ cbId: string }>(`/thread/${threadId}/message?cbid=${cbid}`, {
+      body,
+      receiverId
+    });
+  }
+
+  // Pipelines API methods
+  async getAllPipelines(cbid: string): Promise<ApiResponse<Pipeline[]>> {
+    return this.get<Pipeline[]>(`/pipelines?cbid=${cbid}`);
+  }
+
+  async getPipeline(pipelineId: string, cbid: string): Promise<ApiResponse<Pipeline>> {
+    return this.get<Pipeline>(`/pipeline/${pipelineId}?cbid=${cbid}`);
+  }
+
+  async createPipeline(cbid: string, name?: string, parentThreadId?: string): Promise<ApiResponse<{ cbId: string }>> {
+    return this.post<{ cbId: string }>(`/pipeline/create?cbid=${cbid}`, {
+      name,
+      parentThreadId
+    });
+  }
+
+  async updatePipeline(pipelineId: string, cbid: string, name?: string, parentThreadId?: string): Promise<ApiResponse<Pipeline>> {
+    return this.put<Pipeline>(`/pipeline/${pipelineId}?cbid=${cbid}`, {
+      name,
+      parentThreadId
+    });
+  }
+
+  async deletePipeline(pipelineId: string, cbid: string): Promise<ApiResponse<void>> {
+    return this.post<void>(`/pipeline/${pipelineId}?cbid=${cbid}`, {});
   }
 }
 

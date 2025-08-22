@@ -19,6 +19,7 @@ import quickbooksAuthRoutes from './routes/quickbooksAuth';
 import coralbricksProfileRoutes from './routes/coralbricksProfile';
 import quickbooksProfileRoutes from './routes/quickbooksProfile';
 import threadsRoutes from './routes/threads';
+import pipelinesRoutes from './routes/pipelines';
 
 // Create Express app
 const app = express();
@@ -170,6 +171,7 @@ app.use('/quickbooks', quickbooksAuthRoutes);
 app.use('/profile', coralbricksProfileRoutes);
 app.use('/quickbooks/profile', quickbooksProfileRoutes);
 app.use('/', threadsRoutes);
+app.use('/', pipelinesRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

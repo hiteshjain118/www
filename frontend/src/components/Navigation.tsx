@@ -33,6 +33,11 @@ const Navigation: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
+  const handleCreateClick = () => {
+    navigate('/create');
+    setIsDropdownOpen(false);
+  };
+
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
@@ -95,6 +100,13 @@ const Navigation: React.FC = () => {
                 >
                   Profile
                 </button>
+                <button
+                  onClick={handleCreateClick}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                >
+                  Create Agent
+                </button>
+                <div className="border-t border-gray-200 my-1"></div>
                 <button
                   onClick={handleSignOut}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"

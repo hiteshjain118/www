@@ -38,7 +38,7 @@ router.delete('/disconnect/:realmId', async (req: Request, res: Response): Promi
     
     log.info(`Disconnecting QuickBooks company for cbid: ${cbidBigInt} (realm: ${realmId})`);
     
-    const disconnectResult = await qboService.disconnectCompany(realmId);
+    const disconnectResult = await qboService.disconnectCompany(realmId, cbidBigInt);
     
     if (disconnectResult.success) {
       log.info(`Successfully disconnected from QuickBooks company for cbid: ${cbidBigInt} (realm: ${realmId})`);
@@ -163,13 +163,13 @@ router.get('/status/:realmId', async (req: Request, res: Response): Promise<void
     
     log.info(`Checking QuickBooks company status for cbid: ${cbidBigInt} (realm: ${realmId})`);
     
-    const connectionResult = await qboService.isCompanyConnected(realmId);
-    
-    if (connectionResult.success) {
-      const isConnected = connectionResult.data;
+          const connectionResult = await qboService.isCompanyConnected(realmId, cbidBigInt);
       
-      if (isConnected) {
-        const tokenResult = await qboService.getValidAccessToken(realmId);
+      if (connectionResult.success) {
+        const isConnected = connectionResult.data;
+        
+        if (isConnected) {
+          const tokenResult = await qboService.getValidAccessToken(realmId, cbidBigInt);
         const hasValidToken = tokenResult.success && tokenResult.data !== null;
         
         res.json({
@@ -245,10 +245,10 @@ router.get('/user', async (req: Request, res: Response): Promise<void> => {
     if (companiesResult.success && companiesResult.data && companiesResult.data.length > 0) {
       // Get the first connected company
       const realmId = companiesResult.data[0].realm_id;
-      const connectionResult = await qboService.isCompanyConnected(realmId);
+      const connectionResult = await qboService.isCompanyConnected(realmId, cbidBigInt);
       
       if (connectionResult.success && connectionResult.data) {
-        const tokenResult = await qboService.getValidAccessToken(realmId);
+        const tokenResult = await qboService.getValidAccessToken(realmId, cbidBigInt);
         const hasValidToken = tokenResult.success && tokenResult.data !== null;
         
         res.json({

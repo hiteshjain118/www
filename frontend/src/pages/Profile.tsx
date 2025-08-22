@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
-import ThreadsSidebar from '../components/ThreadsSidebar';
+import Sidebar from '../components/Sidebar';
 
 interface QBCompany {
   realm_id: string;
@@ -11,22 +11,16 @@ interface QBCompany {
   last_connected?: string;
 }
 
-interface QBProfile {
-  realm_id: string;
-  connected: boolean;
-  has_valid_token: boolean;
-  user_id: string;
-  cbid: string;
-}
+
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [qbProfile, setQbProfile] = useState<QBProfile | null>(null);
+
   const [qbCompanies, setQbCompanies] = useState<QBCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successMessage] = useState<string | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -57,7 +51,7 @@ const Profile: React.FC = () => {
         // Fetch QuickBooks user info
         const qbUserResponse = await apiClient.get(`/quickbooks/profile/user?cbid=${user.cbid}`);
         if (qbUserResponse.success && qbUserResponse.data) {
-          setQbProfile(qbUserResponse.data as QBProfile);
+  
         }
 
         // Fetch QuickBooks companies
@@ -92,11 +86,15 @@ const Profile: React.FC = () => {
   const handleThreadSelect = (threadId: string) => {
     setSelectedThreadId(threadId);
     console.log('Selected thread:', threadId);
+    // Navigate to thread page with the selected thread
+    navigate(`/thread/${threadId}`);
   };
 
   const handleThreadCreate = (threadId: string) => {
     setSelectedThreadId(threadId);
     console.log('Created and selected new thread:', threadId);
+    // Navigate to thread page with the new thread
+    navigate(`/thread/${threadId}`);
   };
 
   const handleConnectQuickBooks = async () => {
@@ -125,11 +123,13 @@ const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex">
-      <ThreadsSidebar 
+      <Sidebar 
         userCbid={user.cbid}
         selectedThreadId={selectedThreadId || undefined}
         onThreadSelect={handleThreadSelect}
         onThreadCreate={handleThreadCreate}
+                    onPipelineSelect={(pipelineId) => navigate(`/pipeline/${pipelineId}`)}
+        onPipelineCreate={(pipelineId) => console.log('Pipeline created:', pipelineId)}
       />
       
       <div className="flex-1 overflow-auto">
