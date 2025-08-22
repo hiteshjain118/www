@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Supabase specific settings
+  directUrl = env("DATABASE_URL")
+}
+
+model Profile {
+  id           BigInt   @id @default(dbgenerated("nextval('global_cb_profile_bigint_id')")) @db.BigInt
+  timeZone     String?  @map("time_zone")
+  createdAt    DateTime @default(now()) @map("created_at")
+  authUserId   String?  @unique @map("user_id")
+  firstName    String?  @map("first_name")
+  lastName     String?  @map("last_name")
+  email        String?  @map("email")
+  
+  // Relations
+  qboProfiles QboProfile[]
+  qboProfilesSandbox QboProfileSandbox[]
+  threads Threads[]
+  
+  @@map("profiles")
+}
+
+model User {
+  id        String    @id
+  email     String    @unique
+  role      String    @default("authenticated")
+  createdAt DateTime  @default(now()) @map("created_at")
+  
+  @@map("users")
+}
+
+// QBO Profile for Production Environment
+model QboProfile {
+  cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
+  ownerId                 BigInt   @map("owner_id") @db.BigInt
+  realmId                 String?  @map("realm_id")
+  accessToken             String?  @map("access_token")
+  refreshToken            String?  @map("refresh_token")
+  expiresIn               Int?     @map("expires_in")
+  refreshTokenExpiresIn   Int?     @map("refresh_token_expires_in")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  @@map("qbo_profiles")
+}
+
+// QBO Profile for Sandbox Environment
+model QboProfileSandbox {
+  cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
+  ownerId                 BigInt   @map("owner_id") @db.BigInt
+  realmId                 String?  @map("realm_id")
+  accessToken             String?  @map("access_token")
+  refreshToken            String?  @map("refresh_token")
+  expiresIn               Int?     @map("expires_in")
+  refreshTokenExpiresIn   Int?     @map("refresh_token_expires_in")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  @@map("qbo_profiles_sandbox")
+}
+
+model Threads {
+  cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
+  ownerId                 BigInt   @map("owner_id") @db.BigInt
+  createdAt               DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  @@map("threads")
+}

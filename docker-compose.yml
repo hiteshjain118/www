@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  auth-service:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - JWT_EXPIRES_IN=24h
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - QBO_CLIENT_ID=${QBO_CLIENT_ID}
+      - QBO_CLIENT_SECRET=${QBO_CLIENT_SECRET}
+      - QBO_AUTH_URL=https://appcenter.intuit.com/connect/oauth2
+      - QBO_REDIRECT_URI=http://localhost:3001/auth/quickbooks/callback
+      - CORS_ORIGIN=http://localhost:3001
+      - LOG_LEVEL=debug
+      - LOG_FILE=logs/auth-service.log
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a database service if needed
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     - POSTGRES_DB=coralbricks_auth
+  #     - POSTGRES_USER=auth_user
+  #     - POSTGRES_PASSWORD=auth_password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres_data: 

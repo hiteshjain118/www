@@ -1,0 +1,36 @@
+{
+  "name": "coralbricks-auth-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.7",
+    "@heroicons/react": "^2.2.0",
+    "@supabase/supabase-js": "^2.55.0",
+    "framer-motion": "^12.23.12",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitejs/plugin-react": "^5.0.1",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8.54.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
+  }
+} 
