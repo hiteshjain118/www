@@ -1,13 +1,6 @@
 // Frontend-specific types
 
 // User and authentication types
-export interface User {
-  id: string;
-  email: string;
-  role: string;
-  cbid: string;
-}
-
 export interface AuthUser {
   id: string;
   email: string;
@@ -17,27 +10,10 @@ export interface AuthUser {
 
 // QuickBooks types
 export interface QBOCompany {
+  qbo_profile_id: string; // Maps to the specific QuickBooks company connection
   realm_id: string;
   company_name?: string;
-  connected: boolean;
-  last_connected?: string;
-}
-
-export interface QBOUserInfo {
-  realm_id: string;
-  connected: boolean;
-  has_valid_token: boolean;
-  user_id: string;
-  cbid: string;
-}
-
-export interface QBOAuthResponse {
-  success: boolean;
-  auth_url?: string;
-  message?: string;
-  user_id?: string;
-  cbid?: string;
-  error?: string;
+  last_connected: string;
 }
 
 // API Response types

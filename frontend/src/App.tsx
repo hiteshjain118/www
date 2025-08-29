@@ -9,16 +9,18 @@ import Pipeline from './pages/Pipeline';
 function App() {
   return (
     <AuthProvider>
-      <div className="App">
+      <div className="App flex flex-col min-h-screen">
         <Navigation />
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/create" element={<Thread />} />
-          <Route path="/thread/:threadId" element={<Thread />} />
-          <Route path="/pipeline/:pipelineId" element={<Pipeline />} />
-        </Routes>
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/create" element={<Thread />} />
+            <Route path="/thread/:threadId" element={<Thread />} />
+            <Route path="/pipeline/:pipelineId" element={<Pipeline />} />
+          </Routes>
+        </main>
       </div>
     </AuthProvider>
   );

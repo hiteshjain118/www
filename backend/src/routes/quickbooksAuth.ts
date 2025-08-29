@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { QuickBooksAuthService } from '../services/quickbooksAuth';
+import { QuickBooksAuthService } from '../qbo/quickbooksAuth';
 import { AuthMiddleware } from '../middleware/auth';
 import { log } from '../utils/logger';
+import { config } from '../config';
 
 const router = Router();
 const qboService = new QuickBooksAuthService();
@@ -33,7 +34,7 @@ router.get('/login', authMiddleware.requireCoralBricksAuth, async (req: Request,
         auth_url: authUrl
       },
       message: 'Redirect user to this URL for QuickBooks authorization',
-      user_id: req.user.id,
+      user_id: req.user.id || 'unknown', // Handle optional id field
       cbid: req.user.cbid.toString()
     });
     
@@ -60,44 +61,45 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     const realmId = req.query.realmId as string;
     
     if (!code) {
-      res.redirect(`http://localhost:3002/profile?error=missing_auth_code`);
+      res.redirect(`${config.frontendUrl}/profile?error=missing_auth_code`);
       return;
     }
     
     if (!realmId) {
-      res.redirect(`http://localhost:3002/profile?error=missing_realm_id`);
+      res.redirect(`${config.frontendUrl}/profile?error=missing_realm_id`);
       return;
     }
     
     if (!state) {
-      res.redirect(`http://localhost:3002/profile?error=missing_state`);
+      res.redirect(`${config.frontendUrl}/profile?error=missing_state`);
       return;
     }
     
     // Extract cbid from state parameter
-    const cbid = BigInt(state);
+    const ownerId = BigInt(state);
     
-    log.info(`QuickBooks OAuth callback received for cbid: ${cbid} (realm: ${realmId})`);
+    log.info(`QuickBooks OAuth callback received for ownerId: ${ownerId} (realm: ${realmId})`);
     
     // Exchange code for tokens
     const tokenResult = await qboService.exchangeCodeForTokens(code, realmId);
     
     if (tokenResult.success && tokenResult.data) {
       // Store tokens
-      const storeResult = await qboService.storeTokens(realmId, tokenResult.data, cbid, cbid);
+      // get logged in coralbricks user here 
+      await qboService.storeTokens(
+        realmId, 
+        tokenResult.data, 
+        null, // cbId
+        ownerId
+      );
       
-      if (storeResult.success) {
-        log.info(`Successfully connected to QuickBooks company for cbid: ${cbid} (realm: ${realmId})`);
-        
-        // Redirect back to frontend profile page with success message
-        res.redirect(`http://localhost:3002/profile?connected=true&realm_id=${realmId}`);
-      } else {
-        // Redirect back to frontend profile page with error
-        res.redirect(`http://localhost:3002/profile?error=token_storage_failed`);
-      }
+      log.info(`Successfully connected to QuickBooks company for ownerId: ${ownerId} (realm: ${realmId})`);
+      
+      // Redirect back to frontend profile page with success message
+      res.redirect(`${config.frontendUrl}/profile?connected=true&realm_id=${realmId}`);
     } else {
       // Redirect back to frontend profile page with connection error
-      res.redirect(`http://localhost:3002/profile?error=connection_failed`);
+      res.redirect(`${config.frontendUrl}/profile?error=connection_failed`);
     }
     
   } catch (error) {
@@ -105,7 +107,7 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     log.error(`QuickBooks OAuth callback error: ${errorMessage}`, { error: String(error) });
     
     // Redirect back to frontend profile page with general error
-    res.redirect(`http://localhost:3002/profile?error=callback_error`);
+    res.redirect(`${config.frontendUrl}/profile?error=callback_error`);
   }
 });
 

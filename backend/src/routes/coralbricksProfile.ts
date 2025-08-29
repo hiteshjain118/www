@@ -45,19 +45,18 @@ router.get('/:cbid', async (req: Request, res: Response): Promise<void> => {
         const profileResponse = {
           success: true,
           data: {
-            id: cbUser.id.toString(),
-            cbid: cbUser.cbid.toString(),
-            time_zone: cbUser.time_zone,
-            created_at: cbUser.created_at,
-            auth_user_id: cbUser.auth_user_id,
+            cbid: cbUser.id.toString(),
+            time_zone: cbUser.timeZone,
+            created_at: cbUser.createdAt,
+            auth_user_id: cbUser.authUserId,
             viewer_context: {
-              cbid: cbUser.viewer_context.cbid.toString(),
+              cbid: cbUser.id.toString(),
             },
-            // Include the method results as static properties for JSON response
-            full_name: cbUser.get_full_name(),
-            email: cbUser.get_email(),
-            phone: cbUser.get_phone(),
-            timezone: cbUser.get_timezone()
+            // Include the profile data as static properties for JSON response
+            full_name: `${cbUser.firstName || ''} ${cbUser.lastName || ''}`.trim(),
+            email: cbUser.email || '',
+            phone: '', // Not available in Profile
+            timezone: cbUser.timeZone || 'UTC'
           }
         };
         

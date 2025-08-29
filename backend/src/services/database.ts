@@ -64,29 +64,17 @@ export class DatabaseService {
 
       const row = result.rows[0];
       
-      // Create CBUser object matching the interface
-      const cbUser: CBUser = {
-        id: BigInt(row.id),
-        time_zone: row.time_zone || undefined,
-        created_at: row.created_at ? new Date(row.created_at) : new Date(),
-        auth_user_id: row.auth_user_id || '',
-        viewer_context: {
-          cbid: BigInt(row.id),
-        },
-        cbid: BigInt(row.id),
-        
-        // Implement the required methods
-        get_connected_remote_user: (platform) => ({
-          viewer_context: {
-            cbid: BigInt(row.id),
-          },
-          platform
-        }),
-        get_timezone: () => row.time_zone || 'America/New_York',
-        get_full_name: () => 'John Doe', // TODO: Get from actual data
-        get_email: () => 'john.doe@example.com', // TODO: Get from actual data
-        get_phone: () => '+1234567890' // TODO: Get from actual data
-      };
+      // Create CBUser using the static init method
+      const cbUser = CBUser.init(
+        row.time_zone || 'America/Los_Angeles',
+        row.created_at ? new Date(row.created_at) : new Date(),
+        row.auth_user_id || '',
+        BigInt(row.id),
+        row.first_name || '',
+        row.last_name || '',
+        row.email || '',
+        row.phone || ''
+      );
 
 
       

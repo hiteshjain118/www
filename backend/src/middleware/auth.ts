@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { CoralBricksAuthService } from '../services/coralbricksAuth';
-import { User, ApiResponse } from '../types';
+import { AuthUser, ApiResponse } from '../types';
 import { log } from '../utils/logger';
 
 // Extend Request interface to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: AuthUser;
     }
   }
 }

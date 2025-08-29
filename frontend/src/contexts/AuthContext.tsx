@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser } from '../types';
+import { config } from '../config';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -58,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     try {
       // Call your backend API for signup
-      const response = await fetch('http://localhost:3001/login/signup', {
+      const response = await fetch(`${config.backendApiUrl}/login/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       // Call your backend API
-      const response = await fetch('http://localhost:3001/login', {
+      const response = await fetch(`${config.backendApiUrl}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

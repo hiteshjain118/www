@@ -10,9 +10,29 @@ if (!existsSync(logsDir)) {
   mkdirSync(logsDir, { recursive: true });
 }
 
+// Custom timestamp format for PST/PDT timezone
+const pstTimestamp = winston.format((info) => {
+  const now = new Date();
+  
+  // Convert to Pacific Time using toLocaleString
+  const pacificTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+  
+  // Format as YYYY-MM-DD HH:mm:ss.xxx
+  const year = pacificTime.getFullYear();
+  const month = String(pacificTime.getMonth() + 1).padStart(2, '0');
+  const day = String(pacificTime.getDate()).padStart(2, '0');
+  const hours = String(pacificTime.getHours()).padStart(2, '0');
+  const minutes = String(pacificTime.getMinutes()).padStart(2, '0');
+  const seconds = String(pacificTime.getSeconds()).padStart(2, '0');
+  const milliseconds = String(now.getMilliseconds()).padStart(3, '0'); // Use original milliseconds
+  
+  info.timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+  return info;
+});
+
 // Define log format
 const logFormat = winston.format.combine(
-  winston.format.timestamp(),
+  pstTimestamp(),
   winston.format.errors({ stack: true }),
   winston.format.json()
 );
@@ -26,8 +46,12 @@ export const logger = winston.createLogger({
     // Write all logs to console
     new winston.transports.Console({
       format: winston.format.combine(
+        pstTimestamp(),
         winston.format.colorize(),
-        winston.format.simple()
+        winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
+          const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
+          return `[${timestamp}] [${service}] [${level.toUpperCase()}] ${message} ${metaStr}`;
+        })
       )
     }),
     // Write all logs with level 'error' and below to error.log
@@ -45,7 +69,14 @@ export const logger = winston.createLogger({
 // If we're not in production, log to console as well
 if (config.nodeEnv === 'development') {
   logger.add(new winston.transports.Console({
-    format: winston.format.simple()
+    format: winston.format.combine(
+      pstTimestamp(),
+      winston.format.colorize(),
+      winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
+        const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
+        return `[${timestamp}] [${service}] [${level.toUpperCase()}] ${message} ${metaStr}`;
+      })
+    )
   }));
 }
 

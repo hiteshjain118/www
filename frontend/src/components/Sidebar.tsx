@@ -23,13 +23,18 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <div className="w-80 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto">
+      {/* Threads section with its own scroll */}
+      <div className="flex-shrink-0">
         <Threads
           userCbid={userCbid}
           selectedThreadId={selectedThreadId}
           onThreadSelect={onThreadSelect}
           onThreadCreate={onThreadCreate}
         />
+      </div>
+      
+      {/* Pipelines section with its own scroll */}
+      <div className="flex-1 min-h-0">
         <Pipelines
           userCbid={userCbid}
           selectedPipelineId={selectedPipelineId}

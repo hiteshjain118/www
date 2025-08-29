@@ -4,12 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
 import Sidebar from '../components/Sidebar';
 
-interface QBCompany {
-  realm_id: string;
-  company_name?: string;
-  connected: boolean;
-  last_connected?: string;
-}
+import { QBOCompany } from '../types';
 
 
 
@@ -17,10 +12,10 @@ const Profile: React.FC = () => {
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  const [qbCompanies, setQbCompanies] = useState<QBCompany[]>([]);
+  const [qbCompanies, setQbCompanies] = useState<QBOCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -57,7 +52,7 @@ const Profile: React.FC = () => {
         // Fetch QuickBooks companies
         const qbCompaniesResponse = await apiClient.get(`/quickbooks/profile/companies?cbid=${user.cbid}`);
         if (qbCompaniesResponse.success && qbCompaniesResponse.data) {
-          setQbCompanies(qbCompaniesResponse.data as QBCompany[]);
+          setQbCompanies(qbCompaniesResponse.data as QBOCompany[]);
         }
 
       } catch (error) {
@@ -121,8 +116,37 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleDisconnectCompany = async (qbo_profile_id: string) => {
+    if (!user?.cbid) {
+      setError('User not authenticated');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiClient.disconnectQuickBooksCompany(user.cbid, qbo_profile_id);
+      
+      if (response.success) {
+        setSuccessMessage('Successfully disconnected from QuickBooks company');
+        // Refresh the companies list
+        const qbCompaniesResponse = await apiClient.getQuickBooksCompanies(user.cbid);
+        if (qbCompaniesResponse.success && qbCompaniesResponse.data) {
+          setQbCompanies(qbCompaniesResponse.data as QBOCompany[]);
+        }
+      } else {
+        setError(response.error || 'Failed to disconnect from QuickBooks company');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to disconnect from QuickBooks company');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex pt-16">
       <Sidebar 
         userCbid={user.cbid}
         selectedThreadId={selectedThreadId || undefined}
@@ -166,13 +190,14 @@ const Profile: React.FC = () => {
                 {qbCompanies.length > 0 ? (
                   <div className="space-y-4">
                     {qbCompanies.map((company) => (
-                      <div key={company.realm_id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={company.qbo_profile_id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="text-lg font-medium text-gray-900">
                               {company.company_name || `Company ${company.realm_id}`}
                             </h3>
                             <p className="text-sm text-gray-600">Realm ID: {company.realm_id}</p>
+                            <p className="text-sm text-gray-600">Profile ID: {company.qbo_profile_id}</p>
                             {company.last_connected && (
                               <p className="text-sm text-gray-500">
                                 Last connected: {new Date(company.last_connected).toLocaleDateString()}
@@ -180,23 +205,32 @@ const Profile: React.FC = () => {
                             )}
                           </div>
                           <div className="flex items-center space-x-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              company.connected 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {company.connected ? 'Connected' : 'Disconnected'}
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Connected
                             </span>
                             <button 
-                              onClick={handleConnectQuickBooks}
-                              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-coral-600 hover:bg-coral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-500 transition-colors"
+                              onClick={() => handleDisconnectCompany(company.qbo_profile_id)}
+                              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
                             >
-                              {company.connected ? 'Reconnect' : 'Connect'}
+                              Disconnect
                             </button>
                           </div>
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Add another company button */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                      <button 
+                        onClick={handleConnectQuickBooks}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-coral-700 bg-coral-50 hover:bg-coral-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coral-500 transition-colors"
+                      >
+                        <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Onboard Another Company
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">

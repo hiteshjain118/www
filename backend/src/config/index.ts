@@ -6,6 +6,7 @@ dotenv.config();
 
 export const config: Config = {
   port: parseInt(process.env.PORT || '3000', 10),
+  internalPort: parseInt(process.env.INTERNAL_PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
@@ -16,7 +17,9 @@ export const config: Config = {
   qboClientId: process.env.QBO_CLIENT_ID || '',
   qboClientSecret: process.env.QBO_CLIENT_SECRET || '',
   qboAuthUrl: process.env.QBO_AUTH_URL || 'https://appcenter.intuit.com/connect/oauth2',
-  qboRedirectUri: process.env.QBO_REDIRECT_URI || 'http://localhost:3000/auth/quickbooks/callback',
+  qboTokenUrl: process.env.QBO_TOKEN_URL || 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+  qboRedirectUri: process.env.QBO_REDIRECT_URI || 'http://localhost:3000/quickbooks/callback',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3002',
   databaseUrl: process.env.DATABASE_URL,
   logLevel: process.env.LOG_LEVEL || 'info',
   logFile: process.env.LOG_FILE || 'logs/auth-service.log',

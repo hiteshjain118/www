@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { config } from '../config';
 import { log } from '../utils/logger';
-import { User, SupabaseAuthResponse, SupabaseTokenData, ApiResponse } from '../types';
+import { AuthUser, SupabaseAuthResponse, SupabaseTokenData, ApiResponse } from '../types';
 import { PrismaService } from './prismaService';
 import { createClient } from '@supabase/supabase-js';
 
@@ -40,17 +40,18 @@ export class CoralBricksAuthService {
    * Get user information from the profiles table using cbid
    * This is a mock implementation - in production, you'd connect to your database
    */
-  async getUserFromProfiles(cbid: bigint): Promise<ApiResponse<User>> {
+  async getUserFromProfiles(cbid: bigint): Promise<ApiResponse<AuthUser>> {
     try {
       log.info(`Fetching user profile for cbid: ${cbid}`);
       
       // TODO: Replace with actual database query
       // For now, return a mock user
-      const mockUser: User = {
-        id: cbid.toString(),
+      // Note: cbid is string in AuthUser interface
+      const mockUser: AuthUser = {
+        id: cbid.toString(), // cbid as string for AuthUser
         email: `user-${cbid}@example.com`,
         role: 'authenticated',
-        cbid: cbid
+        cbid: cbid.toString()
       };
 
       log.info(`User profile found for cbid: ${cbid}`);

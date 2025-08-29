@@ -1,40 +1,22 @@
 import { Request } from 'express';
+import { CBUser, RemoteProfile } from './profiles';
 
-// User and authentication types
-export interface User {
-  id: string;
-  email: string;
-  role: string;
-  cbid: bigint;
+// Re-export profile types
+export { CBUser, RemoteProfile };
+
+// HTTP Connection interface - translated from Python IHTTPConnection
+export interface IRemoteHTTPConnection {
+  authenticate(): Promise<string>;
+  get_cbid(): bigint;
+  get_platform_name(): string;
+  get_remote_user(): RemoteProfile;
+
+  get_headers(): Promise<Record<string, string>>;
 }
 
-// Translated from builder/builder_package/core/cb_user.py
-export enum RemotePlatform {
-  QBO = "qbo"
-}
-
-export interface ViewerContext {
-  cbid: bigint;
-}
-
-export interface CBUser {
-  id: bigint;
-  time_zone?: string;
-  created_at: Date;
-  auth_user_id: string;
-  viewer_context: ViewerContext;
-  cbid: bigint;
-  
-  get_connected_remote_user(platform: RemotePlatform): RemoteProfile;
-  get_timezone(): string;
-  get_full_name(): string;
-  get_email(): string;
-  get_phone(): string;
-}
-
-export interface RemoteProfile {
-  viewer_context: ViewerContext;
-  platform: RemotePlatform;
+// HTTP Retriever interface
+export interface IRetriever {
+  retrieve(): Promise<any>;
 }
 
 export interface AuthUser {
@@ -62,27 +44,10 @@ export interface SupabaseTokenData {
 
 // QuickBooks types
 export interface QBOCompany {
+  qbo_profile_id: bigint;
   realm_id: string;
   company_name?: string;
-  connected: boolean;
-  last_connected?: string;
-}
-
-export interface QBOUserInfo {
-  realm_id: string;
-  connected: boolean;
-  has_valid_token: boolean;
-  user_id: string;
-  cbid: bigint;
-}
-
-export interface QBOAuthResponse {
-  success: boolean;
-  auth_url?: string;
-  message?: string;
-  user_id?: string;
-  cbid?: bigint;
-  error?: string;
+  last_connected: string;
 }
 
 // API Response types
@@ -120,12 +85,13 @@ export interface AuthRequest {
 
 // Middleware types
 export interface AuthenticatedRequest extends Request {
-  user: User;
+  user: AuthUser;
 }
 
 // Environment configuration
 export interface Config {
   port: number;
+  internalPort: number;
   nodeEnv: string;
   jwtSecret: string;
   jwtExpiresIn: string;
@@ -136,7 +102,9 @@ export interface Config {
   qboClientId: string;
   qboClientSecret: string;
   qboAuthUrl: string;
+  qboTokenUrl: string;
   qboRedirectUri: string;
+  frontendUrl: string;
   databaseUrl?: string;
   logLevel: string;
   logFile: string;

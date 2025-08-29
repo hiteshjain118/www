@@ -132,7 +132,7 @@ const Pipelines: React.FC<PipelinesProps> = ({
       </div>
 
       {/* Pipelines List */}
-      <div className="max-h-64 overflow-y-auto">
+      <div className="h-64 overflow-y-auto">
         {loading ? (
           <div className="p-4 text-center text-gray-500">
             <svg className="animate-spin mx-auto h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">

@@ -12,6 +12,7 @@ import rateLimit from 'express-rate-limit';
 import { config, validateConfig } from './config';
 import { log } from './utils/logger';
 import { AuthMiddleware } from './middleware/auth';
+import { startInternalServer } from './internal-server';
 
 // Import routes
 import coralbricksAuthRoutes from './routes/coralbricksAuth';
@@ -88,13 +89,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  log.info(`${req.method} ${req.path}`, {
+  const logData: any = {
     method: req.method,
     path: req.path,
     query: req.query,
     ip: req.ip,
     userAgent: req.get('User-Agent')
-  });
+  };
+
+  // Include request body for POST/PUT requests to show parameters
+  if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
+    logData.body = req.body;
+  }
+
+  log.info(`${req.method} ${req.path}`, logData);
   next();
 });
 
@@ -225,8 +233,8 @@ async function startServer() {
       console.warn('Warning: Using default JWT secret. Change JWT_SECRET in production.');
     }
 
-    // Start listening
-    app.listen(config.port, () => {
+    // Start main API server on port 3000
+    const mainServer = app.listen(config.port, () => {
       log.info(`CoralBricks Authentication Service started on port ${config.port}`);
       console.log(`🚀 CoralBricks Authentication Service started on port ${config.port}`);
       console.log(`📖 API Documentation: http://localhost:${config.port}/`);
@@ -240,6 +248,13 @@ async function startServer() {
       }
     });
 
+    // Start internal tools server on port 3001
+    const internalServer = await startInternalServer();
+
+    // Store server references for graceful shutdown
+    (global as any).mainServer = mainServer;
+    (global as any).internalServer = internalServer;
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error(`Failed to start server: ${errorMessage}`, { error: String(error) });
@@ -252,12 +267,38 @@ async function startServer() {
 process.on('SIGTERM', () => {
   log.info('SIGTERM received, shutting down gracefully');
   console.log('🛑 SIGTERM received, shutting down gracefully');
+  
+  // Close both servers gracefully
+  if ((global as any).mainServer) {
+    (global as any).mainServer.close(() => {
+      log.info('Main server closed');
+    });
+  }
+  if ((global as any).internalServer) {
+    (global as any).internalServer.close(() => {
+      log.info('Internal server closed');
+    });
+  }
+  
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   log.info('SIGINT received, shutting down gracefully');
   console.log('🛑 SIGINT received, shutting down gracefully');
+  
+  // Close both servers gracefully
+  if ((global as any).mainServer) {
+    (global as any).mainServer.close(() => {
+      log.info('Main server closed');
+    });
+  }
+  if ((global as any).internalServer) {
+    (global as any).internalServer.close(() => {
+      log.info('Internal server closed');
+    });
+  }
+  
   process.exit(0);
 });
 

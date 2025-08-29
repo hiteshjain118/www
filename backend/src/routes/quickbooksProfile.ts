@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { QuickBooksAuthService } from '../services/quickbooksAuth';
+import { QuickBooksAuthService } from '../qbo/quickbooksAuth';
 import { log } from '../utils/logger';
+import { CBUser, QBOProfile } from '../types/profiles';
 
 const router = Router();
 const qboService = new QuickBooksAuthService();
@@ -9,45 +10,33 @@ const qboService = new QuickBooksAuthService();
  * DELETE /quickbooks/profile/disconnect/:realmId
  * Disconnect a QuickBooks company
  */
-router.delete('/disconnect/:realmId', async (req: Request, res: Response): Promise<void> => {
+router.delete('/disconnect/:cbid/:qbo_profile_id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const realmId = req.params.realmId;
-    const cbid = req.query.cbid as string;
+    const ownerId = BigInt(req.params.cbid);
+    const qbo_profile_id = BigInt(req.params.qbo_profile_id);
     
-    if (!cbid) {
+    if (!ownerId || !qbo_profile_id) {
       res.status(400).json({
         success: false,
-        error: 'cbid parameter is required',
-        code: 'MISSING_CBID'
-      });
-      return;
-    }
-
-    // Parse cbid as bigint
-    let cbidBigInt: bigint;
-    try {
-      cbidBigInt = BigInt(cbid);
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        error: 'cbid parameter must be a valid integer',
-        code: 'INVALID_CBID'
+        error: 'cbid and qbo_profile_id parameters are required',
+        code: 'MISSING_PARAMETERS'
       });
       return;
     }
     
-    log.info(`Disconnecting QuickBooks company for cbid: ${cbidBigInt} (realm: ${realmId})`);
+    log.info(`Disconnecting QuickBooks company for cbid: ${qbo_profile_id} (ownerId: ${ownerId})`);
     
-    const disconnectResult = await qboService.disconnectCompany(realmId, cbidBigInt);
+    const qbo_profile = await QBOProfile.load_profile({cbid: ownerId}, qbo_profile_id);
+    const disconnectResult = await qbo_profile.disconnectCompany();
     
-    if (disconnectResult.success) {
-      log.info(`Successfully disconnected from QuickBooks company for cbid: ${cbidBigInt} (realm: ${realmId})`);
+    if (disconnectResult) {
+      log.info(`Successfully disconnected from QuickBooks company for cbid: ${qbo_profile_id} (ownerId: ${ownerId})`);
       
       res.json({
         success: true,
         message: 'Successfully disconnected from QuickBooks company',
-        realm_id: realmId,
-        cbid: cbidBigInt
+        qbo_profile_id: qbo_profile_id,
+        ownerId: ownerId
       });
     } else {
       res.status(500).json({
@@ -75,46 +64,34 @@ router.delete('/disconnect/:realmId', async (req: Request, res: Response): Promi
  */
 router.get('/companies', async (req: Request, res: Response): Promise<void> => {
   try {
-    const cbid = req.query.cbid as string;
+    const ownerId = BigInt(req.query.cbid as string);
     
-    if (!cbid) {
+    if (!ownerId) {
       res.status(400).json({
         success: false,
         error: 'cbid parameter is required',
-        code: 'MISSING_CBID'
+        code: 'MISSING_PARAMETERS'
       });
       return;
     }
 
-    // Parse cbid as bigint
-    let cbidBigInt: bigint;
-    try {
-      cbidBigInt = BigInt(cbid);
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        error: 'cbid parameter must be a valid integer',
-        code: 'INVALID_CBID'
-      });
-      return;
-    }
-
-    log.info(`Fetching QuickBooks companies for cbid: ${cbidBigInt}`);
     
-    const companiesResult = await qboService.getCompanies(cbidBigInt);
+    log.info(`Fetching QuickBooks companies for cbid: ${ownerId}`);
     
-    if (companiesResult.success && companiesResult.data) {
+    const companiesResult = await QBOProfile.getCompanies(ownerId);
+    
+    if (companiesResult) {
       res.json({
         success: true,
-        data: companiesResult.data,
-        message: `Found ${companiesResult.data.length} connected companies`,
-        cbid: cbidBigInt.toString()
+        data: companiesResult,
+        message: `Found ${companiesResult.length} connected companies`,
+        cbid: ownerId.toString()
       });
     } else {
       res.status(500).json({
         success: false,
-        error: companiesResult.error || 'Failed to fetch companies',
-        code: companiesResult.code
+        error: 'Failed to fetch companies',
+        code: 'COMPANIES_FETCH_ERROR'
       });
     }
     
@@ -134,66 +111,32 @@ router.get('/companies', async (req: Request, res: Response): Promise<void> => {
  * GET /quickbooks/profile/status/:realmId
  * Check QuickBooks company connection status
  */
-router.get('/status/:realmId', async (req: Request, res: Response): Promise<void> => {
+router.get('/status/:cbid/:qbo_profile_id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const realmId = req.params.realmId;
-    const cbid = req.query.cbid as string;
+    const qbo_profile_id = BigInt(req.params.qbo_profile_id);
+    const ownerId = BigInt(req.params.cbid);
     
-    if (!cbid) {
+    if (!ownerId || !qbo_profile_id) {
       res.status(400).json({
         success: false,
-        error: 'cbid parameter is required',
-        code: 'MISSING_CBID'
-      });
-      return;
-    }
-
-    // Parse cbid as bigint
-    let cbidBigInt: bigint;
-    try {
-      cbidBigInt = BigInt(cbid);
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        error: 'cbid parameter must be a valid integer',
-        code: 'INVALID_CBID'
+        error: 'cbid and qbo_profile_id parameters are required',
+        code: 'MISSING_PARAMETERS'
       });
       return;
     }
     
-    log.info(`Checking QuickBooks company status for cbid: ${cbidBigInt} (realm: ${realmId})`);
+    log.info(`Checking QuickBooks company status for cbid: ${qbo_profile_id} (ownerId: ${ownerId})`);
     
-          const connectionResult = await qboService.isCompanyConnected(realmId, cbidBigInt);
+    const qbo_profile = await QBOProfile.load_profile({cbid: ownerId}, qbo_profile_id);
+    const access_token = await qbo_profile.getValidAccessTokenWithRefresh();
       
-      if (connectionResult.success) {
-        const isConnected = connectionResult.data;
-        
-        if (isConnected) {
-          const tokenResult = await qboService.getValidAccessToken(realmId, cbidBigInt);
-        const hasValidToken = tokenResult.success && tokenResult.data !== null;
-        
-        res.json({
-          success: true,
-          connected: true,
-          has_valid_token: hasValidToken,
-          realm_id: realmId,
-          cbid: cbidBigInt
-        });
-      } else {
-        res.json({
-          success: true,
-          connected: false,
-          realm_id: realmId,
-          cbid: cbidBigInt
-        });
-      }
-    } else {
-      res.status(500).json({
-        success: false,
-        error: connectionResult.error || 'Failed to check connection status',
-        code: connectionResult.code
-      });
-    }
+    res.json({
+      success: true,
+      connected: access_token !== null,
+      qbo_profile_id: qbo_profile_id,
+      ownerId: ownerId
+    });
+    
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -213,9 +156,9 @@ router.get('/status/:realmId', async (req: Request, res: Response): Promise<void
  */
 router.get('/user', async (req: Request, res: Response): Promise<void> => {
   try {
-    const cbid = req.query.cbid as string;
+    const ownerId = BigInt(req.query.cbid as string);
     
-    if (!cbid) {
+    if (!ownerId) {
       res.status(400).json({
         success: false,
         error: 'cbid parameter is required',
@@ -224,63 +167,33 @@ router.get('/user', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Parse cbid as bigint
-    let cbidBigInt: bigint;
-    try {
-      cbidBigInt = BigInt(cbid);
-    } catch (error) {
-      res.status(400).json({
-        success: false,
-        error: 'cbid parameter must be a valid integer',
-        code: 'INVALID_CBID'
-      });
-      return;
-    }
-
-    log.info(`Fetching QuickBooks user info for cbid: ${cbidBigInt}`);
+    log.info(`Fetching QuickBooks user info for cbid: ${ownerId}`);
     
-    // Check if user has any QuickBooks connections
-    const companiesResult = await qboService.getCompanies(cbidBigInt);
-    
-    if (companiesResult.success && companiesResult.data && companiesResult.data.length > 0) {
-      // Get the first connected company
-      const realmId = companiesResult.data[0].realm_id;
-      const connectionResult = await qboService.isCompanyConnected(realmId, cbidBigInt);
-      
-      if (connectionResult.success && connectionResult.data) {
-        const tokenResult = await qboService.getValidAccessToken(realmId, cbidBigInt);
-        const hasValidToken = tokenResult.success && tokenResult.data !== null;
-        
+    const cb_user = await CBUser.load_profile({cbid: ownerId}, ownerId);
+    const qbo_profile = await QBOProfile.load_any_from_cb_owner({cbid: ownerId}, cb_user);
+    if (qbo_profile) {
+      const is_connected = await qbo_profile.isCompanyConnected();
+      const realmId = qbo_profile.realmId;
         res.json({
           success: true,
           data: {
             realm_id: realmId,
             connected: true,
-            has_valid_token: hasValidToken,
-            cbid: cbidBigInt.toString()
+            has_valid_token: is_connected,
+            qbo_profile_id: qbo_profile.cbId.toString(),
+            cbid: ownerId.toString()
           }
         });
-      } else {
-        res.json({
-          success: true,
-          data: {
-            realm_id: realmId,
-            connected: false,
-            cbid: cbidBigInt.toString()
-          }
-        });
-      }
     } else {
       res.json({
         success: true,
         data: {
           connected: false,
           message: 'No QuickBooks companies connected',
-          cbid: cbidBigInt.toString()
+          cbid: ownerId.toString()
         }
       });
     }
-    
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error(`Get QuickBooks user info error: ${errorMessage}`, { error: String(error) });

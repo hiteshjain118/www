@@ -18,8 +18,7 @@ router.use(authMiddleware.requireCoralBricksAuth);
  */
 router.get('/threads', async (req: Request, res: Response): Promise<void> => {
   try {
-    const authUserId = req.user?.id;
-    if (!authUserId) {
+    if (!req.user?.cbid) {
       res.status(401).json({ 
         success: false, 
         error: 'User not authenticated' 
@@ -28,7 +27,7 @@ router.get('/threads', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Use the cbid directly from the authenticated user
-    const userCbid = BigInt(req.user!.cbid);
+    const userCbid = BigInt(req.user.cbid);
 
     const result = await threadsService.getAllThreads(userCbid);
     
@@ -52,8 +51,7 @@ router.get('/threads', async (req: Request, res: Response): Promise<void> => {
  */
 router.get('/thread/:cbid', async (req: Request, res: Response): Promise<void> => {
   try {
-    const authUserId = req.user?.id;
-    if (!authUserId) {
+    if (!req.user?.cbid) {
       res.status(401).json({ 
         success: false, 
         error: 'User not authenticated' 
@@ -71,7 +69,7 @@ router.get('/thread/:cbid', async (req: Request, res: Response): Promise<void> =
     }
 
     // Use the cbid directly from the authenticated user
-    const userCbid = BigInt(req.user!.cbid);
+    const userCbid = BigInt(req.user.cbid);
 
     const result = await threadsService.getThreadById(BigInt(cbid), userCbid);
     
@@ -95,8 +93,7 @@ router.get('/thread/:cbid', async (req: Request, res: Response): Promise<void> =
  */
 router.post('/thread/create', async (req: Request, res: Response): Promise<void> => {
   try {
-    const authUserId = req.user?.id;
-    if (!authUserId) {
+    if (!req.user?.cbid) {
       res.status(401).json({ 
         success: false, 
         error: 'User not authenticated' 
@@ -105,7 +102,7 @@ router.post('/thread/create', async (req: Request, res: Response): Promise<void>
     }
 
     // Use the cbid directly from the authenticated user
-    const userCbid = BigInt(req.user!.cbid);
+    const userCbid = BigInt(req.user.cbid);
 
     const result = await threadsService.createThread(userCbid);
     
@@ -129,8 +126,7 @@ router.post('/thread/create', async (req: Request, res: Response): Promise<void>
  */
 router.post('/thread/:cbid/message', async (req: Request, res: Response): Promise<void> => {
   try {
-    const authUserId = req.user?.id;
-    if (!authUserId) {
+    if (!req.user?.cbid) {
       res.status(401).json({ 
         success: false, 
         error: 'User not authenticated' 
@@ -150,7 +146,7 @@ router.post('/thread/:cbid/message', async (req: Request, res: Response): Promis
     }
 
     // Use the cbid directly from the authenticated user as sender
-    const senderCbid = BigInt(req.user!.cbid);
+    const senderCbid = BigInt(req.user.cbid);
     const receiverCbid = receiverId ? BigInt(receiverId) : BigInt(0); // Use 0 for AI messages
 
     const newMessage = await prisma.message.create({

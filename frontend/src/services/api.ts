@@ -1,4 +1,5 @@
 import { config } from '../config';
+import { AuthUser } from '../types';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -18,13 +19,6 @@ export interface SignupRequest {
   password: string;
   firstName: string;
   lastName: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  role: string;
-  cbid: string;
 }
 
 export interface UserProfile {
@@ -141,12 +135,12 @@ class ApiClient {
   }
 
   // Authentication methods
-  async login(credentials: LoginRequest): Promise<ApiResponse<User>> {
-    return this.post<User>('/login', credentials);
+  async login(credentials: LoginRequest): Promise<ApiResponse<AuthUser>> {
+    return this.post<AuthUser>('/login', credentials);
   }
 
-  async signup(userData: SignupRequest): Promise<ApiResponse<User>> {
-    return this.post<User>('/login/signup', userData);
+  async signup(userData: SignupRequest): Promise<ApiResponse<AuthUser>> {
+    return this.post<AuthUser>('/login/signup', userData);
   }
 
   // Profile methods
@@ -154,7 +148,7 @@ class ApiClient {
     return this.get<UserProfile>(`/profile/${cbid}`);
   }
 
-  // QuickBooks methods
+    // QuickBooks methods
   async initiateQuickBooksAuth(cbid: string): Promise<ApiResponse<{ auth_url: string }>> {
     return this.get<{ auth_url: string }>(`/quickbooks/login?cbid=${cbid}`);
   }
@@ -167,9 +161,9 @@ class ApiClient {
     return this.get<any[]>(`/quickbooks/profile/companies?cbid=${cbid}`);
   }
 
-  async disconnectQuickBooksCompany(cbid: string, realmId: string): Promise<ApiResponse<void>> {
+  async disconnectQuickBooksCompany(cbid: string, qbo_profile_id: string): Promise<ApiResponse<void>> {
     try {
-      const response = await fetch(`${this.baseUrl}/quickbooks/profile/disconnect/${realmId}?cbid=${cbid}`, {
+      const response = await fetch(`${this.baseUrl}/quickbooks/profile/disconnect/${cbid}/${qbo_profile_id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -186,6 +180,10 @@ class ApiClient {
         code: 'NETWORK_ERROR'
       };
     }
+  }
+
+  async getQuickBooksCompanyStatus(cbid: string, qbo_profile_id: string): Promise<ApiResponse<any>> {
+    return this.get<any>(`/quickbooks/profile/status/${cbid}/${qbo_profile_id}`);
   }
 
   // Threads API methods

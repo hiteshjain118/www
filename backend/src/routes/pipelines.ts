@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { AuthMiddleware } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from 'coralbricks-common';
 import { logger } from '../utils/logger';
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();
-const prisma = new PrismaClient();
+const prisma = PrismaService.getInstance();
 
 // Apply auth middleware to all routes
 router.use(authMiddleware.requireCoralBricksAuth);
