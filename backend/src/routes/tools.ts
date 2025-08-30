@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { log } from '../utils/logger';
-import { CBUser, QBOProfile } from '../types/profiles';
+import { enhancedLogger as log } from '../utils/logger';
+import { CBUser, QBProfile } from '../types/profiles';
 import { ToolCallWrapper } from '../services/toolCallWrapper';
 import { TOOL_REGISTRY } from '../services/toolCallWrapper';
 
@@ -101,7 +101,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     // Load QBO profile
     const viewerContext = { cbid: BigInt(cbid) };
     const cb_owner = await CBUser.load_profile(viewerContext, BigInt(cbid));
-    const qboProfile = await QBOProfile.load_any_from_cb_owner(viewerContext, cb_owner);
+    const qboProfile = await QBProfile.load_any_from_cb_owner(viewerContext, cb_owner);
 
     // Determine query type based on validate parameter
     const queryType = validate ? "validate" : "retrieve";

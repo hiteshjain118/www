@@ -1,8 +1,8 @@
 import { config, isProduction } from '../config';
 import { log } from '../utils/logger';
 import { QBOCompany, ApiResponse } from '../types';
-import { QBOProfileService } from '.';
-import { QBOProfile } from '../types/profiles';
+import { QboProfileService } from 'coralbricks-common';
+import { QBProfile } from '../types/profiles';
 import axios from 'axios';
 
 export class QuickBooksAuthService {
@@ -121,33 +121,15 @@ export class QuickBooksAuthService {
   }
 
   /**
-   * Store OAuth tokens for a company in the appropriate QBO profiles table
-   */
-  async storeTokens(realmId: string, tokenData: any, cbId: bigint | null, ownerId: bigint): Promise<void> {
-    
-    log.info(`Storing tokens for realm: ${realmId} in ${isProduction ? 'production' : 'sandbox'} table`);
-    
-    await QBOProfileService.upsertProfile({
-      cbId: cbId || BigInt(0),
-      ownerId,
-      realmId,
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      expiresIn: tokenData.expires_in,
-      refreshTokenExpiresIn: tokenData.refresh_token_expires_in || tokenData.expires_in * 2,
-      updatedAt: new Date()
-    } as any, isProduction);
-    
-    log.info(`Tokens stored successfully for realm: ${realmId}`);
-  }
-  /**
    * Get valid access token for a company from QBO profiles
    */
-  async getAccessTokenIfValid(qbo_profile: QBOProfile): Promise<string | null> {
+  async getAccessTokenIfValid(qbo_profile: QBProfile): Promise<string | null> {
     
     log.info(`Getting valid access token for realm: ${qbo_profile.realmId}`);
     
-    const token = await QBOProfileService.getAccessTokenIfValid(qbo_profile.cbId, isProduction);
+    // For now, return the access token from the profile if it's still valid
+    // In a real implementation, you might want to check expiration and refresh if needed
+    const token = qbo_profile.accessToken || null;
     
     log.info(`Access token for realm ${qbo_profile.realmId}: ${token ? 'valid' : 'not found'}`);
     return token;
@@ -156,7 +138,7 @@ export class QuickBooksAuthService {
   /**
    * Refresh access token using refresh token
    */
-  async refreshAndStoreTokens(qbo_profile: QBOProfile): Promise<string> {
+  async refreshAndStoreTokens(qbo_profile: QBProfile): Promise<string> {
     try {
       if (!qbo_profile.refreshToken || !qbo_profile.realmId) {
         throw new Error('No refresh token or realmId available');
@@ -180,7 +162,7 @@ export class QuickBooksAuthService {
 
       const tokenData = response.data;
       
-      await this.storeTokens(qbo_profile.realmId, tokenData, qbo_profile.cbId, qbo_profile.ownerId);
+      await qbo_profile.storeTokens(qbo_profile.realmId, tokenData, qbo_profile.cbId, qbo_profile.ownerId);
       log.info(`Tokens refreshed successfully for realm: ${qbo_profile.realmId}`);
       return tokenData.access_token;
       

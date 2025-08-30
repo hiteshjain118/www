@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaService } from '../services/prismaService';
+import { ProfileService } from 'coralbricks-common';
 import { log } from '../utils/logger';
 
 const router = Router();
@@ -34,11 +34,11 @@ router.get('/:cbid', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Get user profile using PrismaService singleton
-    const prismaService = PrismaService.getInstance();
+    // Get user profile using ProfileService singleton
+    const profileService = ProfileService.getInstance();
     
     try {
-      const cbUser = await prismaService.getUserProfile(cbidBigInt);
+      const cbUser = await profileService.getUserProfile(cbidBigInt);
       
       if (cbUser) {
         // Convert BigInt values to strings for JSON serialization

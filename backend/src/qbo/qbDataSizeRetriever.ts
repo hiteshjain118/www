@@ -4,17 +4,17 @@ import { HTTPRetriever } from '../services/httpRetriever';
 import { IRemoteHTTPConnection } from '../types';
 import { IToolCall, ToolCallResult, ToolDescription } from 'coralbricks-common';
 import { log } from '../utils/logger';
-import { QBOProfile } from '../types/profiles';
+import { QBProfile } from '../types/profiles';
 import { QBHttpConnection } from './qbHttpConnection';
 import { assert } from 'console';
 
 export class QBDataSizeRetriever extends HTTPRetriever implements IToolCall {
   private query: string;
-  private qbo_profile: QBOProfile;
+  private qbo_profile: QBProfile;
   private thread_id: bigint;
 
   constructor(
-    qbo_profile: QBOProfile,
+    qbo_profile: QBProfile,
     thread_id: bigint,
     caller_id: string,
     query: string,

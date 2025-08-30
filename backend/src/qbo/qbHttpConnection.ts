@@ -1,10 +1,10 @@
 import { IRemoteHTTPConnection } from '../types';
-import { QBOProfile } from '../types/profiles';
+import { QBProfile } from '../types/profiles';
 import { log } from '../utils/logger';
 
 export class QBHttpConnection implements IRemoteHTTPConnection {
-  qbo_profile: QBOProfile;
-  constructor(qbo_profile: QBOProfile) {
+  qbo_profile: QBProfile;
+  constructor(qbo_profile: QBProfile) {
     this.qbo_profile = qbo_profile;
   }
 
@@ -29,7 +29,7 @@ export class QBHttpConnection implements IRemoteHTTPConnection {
     return await this.qbo_profile.getValidAccessTokenWithRefresh();
   }
 
-  get_remote_user(): QBOProfile {
+  get_remote_user(): QBProfile {
     return this.qbo_profile;
   }
 

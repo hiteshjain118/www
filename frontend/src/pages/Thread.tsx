@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { Thread as ThreadType, ThreadMessage } from '../services/api';
 import websocketService, { WebSocketMessage } from '../services/websocket';
-import Sidebar from '../components/Sidebar';
 import { 
   PaperAirplaneIcon,
   SparklesIcon,
@@ -24,25 +23,15 @@ interface Message {
 
 const Thread: React.FC = () => {
   const { threadId } = useParams<{ threadId: string }>();
-  const navigate = useNavigate();
   const { user, loading } = useAuth();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentThread, setCurrentThread] = useState<ThreadType | null>(null);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | undefined>(threadId);
   const [wsConnectionStatus, setWsConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
-
-  // Redirect to login if not authenticated (but wait for loading to complete)
-  useEffect(() => {
-    if (!loading && (!user || !user.cbid)) {
-      navigate('/login');
-      return;
-    }
-  }, [user, loading, navigate]);
 
   // Load thread data when threadId changes
   useEffect(() => {
@@ -61,15 +50,15 @@ const Thread: React.FC = () => {
 
   // WebSocket connection management
   useEffect(() => {
-    if (selectedThreadId && user?.cbid) {
-      connectWebSocket(selectedThreadId, user.cbid);
+    if (threadId && user?.cbid) {
+      connectWebSocket(threadId, user.cbid);
     }
 
     return () => {
       // Cleanup WebSocket connection when component unmounts or thread changes
       websocketService.disconnect();
     };
-  }, [selectedThreadId, user?.cbid]);
+  }, [threadId, user?.cbid]);
 
   const connectWebSocket = async (threadId: string, userId: string) => {
     try {
@@ -214,18 +203,8 @@ const Thread: React.FC = () => {
     }
   };
 
-  const handleThreadSelect = (newThreadId: string) => {
-    setSelectedThreadId(newThreadId);
-    navigate(`/thread/${newThreadId}`);
-  };
-
-  const handleThreadCreate = async (newThreadId: string) => {
-    setSelectedThreadId(newThreadId);
-    navigate(`/thread/${newThreadId}`);
-  };
-
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !user?.cbid || !selectedThreadId) return;
+    if (!inputMessage.trim() || !user?.cbid || !threadId) return;
 
     const messageText = inputMessage;
     const messageId = Date.now().toString();
@@ -234,7 +213,7 @@ const Thread: React.FC = () => {
       text: messageText,
       sender: 'user',
       timestamp: new Date(),
-      threadId: selectedThreadId,
+      threadId: threadId,
       acknowledged: false
     };
 
@@ -245,11 +224,11 @@ const Thread: React.FC = () => {
 
     try {
       // Save user message to database
-      await apiClient.createMessage(selectedThreadId, user.cbid, messageText);
+      await apiClient.createMessage(threadId, user.cbid, messageText);
 
       // Send message via WebSocket to chat_js server with messageId
       if (websocketService.isConnected()) {
-        websocketService.sendMessage(messageText, selectedThreadId, messageId);
+        websocketService.sendMessage(messageText, threadId, messageId);
       } else {
         // Fallback: simulate AI response if WebSocket is not connected
         console.warn('WebSocket not connected, using fallback response');
@@ -261,7 +240,7 @@ const Thread: React.FC = () => {
             text: aiResponseText,
             sender: 'ai',
             timestamp: new Date(),
-            threadId: selectedThreadId,
+            threadId: threadId,
             acknowledged: true // Fallback AI response is always delivered
           };
           
@@ -269,7 +248,7 @@ const Thread: React.FC = () => {
 
           // Save AI message to database
           try {
-            await apiClient.createMessage(selectedThreadId, user.cbid, aiResponseText, "0"); // Use "0" for AI receiver
+            await apiClient.createMessage(threadId, user.cbid, aiResponseText, "0"); // Use "0" for AI receiver
           } catch (error) {
             console.error('Error saving AI message:', error);
           }
@@ -343,165 +322,150 @@ const Thread: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex pt-16">
-      {/* Left Panel - Threads Sidebar */}
-      <div className="flex-shrink-0">
-        <Sidebar 
-          userCbid={user.cbid}
-          selectedThreadId={selectedThreadId}
-          onThreadSelect={handleThreadSelect}
-          onThreadCreate={handleThreadCreate}
-          onPipelineSelect={(pipelineId) => navigate(`/pipeline/${pipelineId}`)}
-          onPipelineCreate={(pipelineId) => console.log('Pipeline created:', pipelineId)}
-        />
-      </div>
-
-      {/* Main Content - Agent Builder */}
-      <div className="flex-1 flex min-h-0">
-        {/* Chat Panel */}
-        <div className="w-3/5 bg-white flex flex-col border-r border-gray-200 min-h-0">
-          {/* Chat Header */}
-          <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-coral-600 to-brick-600 rounded-full flex items-center justify-center">
-                  <ChatBubbleLeftRightIcon className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">AI Agent Builder</h2>
-                  <p className="text-sm text-gray-500">
-                    {currentThread ? `Thread ${currentThread.cbId.slice(-6)}` : 'New conversation'}
-                  </p>
-                </div>
+    <div className="flex-1 flex min-h-0">
+      {/* Chat Panel */}
+      <div className="w-3/5 bg-white flex flex-col border-r border-gray-200 min-h-0">
+        {/* Chat Header */}
+        <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-coral-600 to-brick-600 rounded-full flex items-center justify-center">
+                <ChatBubbleLeftRightIcon className="w-4 h-4 text-white" />
               </div>
-              
-              {/* Connection Status */}
-              <div className="flex items-center space-x-2">
-                {getConnectionStatusIcon()}
-                <span className={`text-sm ${
-                  wsConnectionStatus === 'connected' ? 'text-green-600' :
-                  wsConnectionStatus === 'connecting' ? 'text-yellow-600' :
-                  wsConnectionStatus === 'error' ? 'text-red-600' :
-                  'text-gray-500'
-                }`}>
-                  {getConnectionStatusText()}
-                </span>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">AI Agent Builder</h2>
+                <p className="text-sm text-gray-500">
+                  {currentThread ? `Thread ${currentThread.cbId.slice(-6)}` : 'New conversation'}
+                </p>
               </div>
             </div>
-          </div>
-
-          {/* Messages - Only this area should scroll */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-            {messages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`flex items-end space-x-2 ${message.sender === 'user' ? '' : ''}`}>
-                  <div className={`max-w-xs lg:max-w-lg xl:max-w-xl px-4 py-2 rounded-lg ${
-                    message.sender === 'user' 
-                      ? 'bg-gradient-to-r from-coral-600 to-brick-600 text-white' 
-                      : message.id.startsWith('system') || message.id.startsWith('error')
-                      ? 'bg-blue-50 text-blue-900 border border-blue-200'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}>
-                    <div className="text-sm whitespace-pre-wrap">{message.text}</div>
-                    <div className="text-xs mt-1 opacity-70">
-                      {message.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                  
-                  {/* Show acknowledgment status for user messages - to the right */}
-                  {message.sender === 'user' && (
-                    <div className="flex-shrink-0 mb-1 ml-2">
-                      {message.acknowledged ? (
-                        <div className="w-4 h-4 rounded-sm bg-gray-400 flex items-center justify-center" title="Message delivered">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-4 h-4 rounded-sm border-2 border-gray-300 animate-pulse" title="Sending..."></div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
             
-            <div ref={messagesEndRef} />
-            
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-start"
-              >
-                <div className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-            <div className="flex space-x-3">
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Describe your agent idea and I'll help you build it..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-                disabled={!websocketService.isConnected() && wsConnectionStatus !== 'connecting'}
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isLoading || !websocketService.isConnected()}
-                className="px-4 py-2 bg-gradient-to-r from-coral-600 to-brick-600 text-white rounded-lg hover:from-coral-700 hover:to-brick-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <PaperAirplaneIcon className="w-4 h-4" />
-              </button>
+            {/* Connection Status */}
+            <div className="flex items-center space-x-2">
+              {getConnectionStatusIcon()}
+              <span className={`text-sm ${
+                wsConnectionStatus === 'connected' ? 'text-green-600' :
+                wsConnectionStatus === 'connecting' ? 'text-yellow-600' :
+                wsConnectionStatus === 'error' ? 'text-red-600' :
+                'text-gray-500'
+              }`}>
+                {getConnectionStatusText()}
+              </span>
             </div>
-            
-            {/* Connection warning */}
-            {!websocketService.isConnected() && wsConnectionStatus !== 'connecting' && (
-              <div className="mt-2 text-sm text-red-600 flex items-center space-x-1">
-                <ExclamationTriangleIcon className="w-4 h-4" />
-                <span>Not connected to AI. Messages may not be processed.</span>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right Panel - Agent Preview */}
-        <div className="w-2/5 bg-white flex flex-col min-h-0">
-          {/* Preview Header */}
-          <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-                <SparklesIcon className="w-3 h-3 text-white" />
+        {/* Messages - Only this area should scroll */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`flex items-end space-x-2 ${message.sender === 'user' ? '' : ''}`}>
+                <div className={`max-w-xs lg:max-w-lg xl:max-w-xl px-4 py-2 rounded-lg ${
+                  message.sender === 'user' 
+                    ? 'bg-gradient-to-r from-coral-600 to-brick-600 text-white' 
+                    : message.id.startsWith('system') || message.id.startsWith('error')
+                    ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  <div className="text-sm whitespace-pre-wrap">{message.text}</div>
+                  <div className="text-xs mt-1 opacity-70">
+                    {message.timestamp.toLocaleTimeString()}
+                  </div>
+                </div>
+                
+                {/* Show acknowledgment status for user messages - to the right */}
+                {message.sender === 'user' && (
+                  <div className="flex-shrink-0 mb-1 ml-2">
+                    {message.acknowledged ? (
+                      <div className="w-4 h-4 rounded-sm bg-gray-400 flex items-center justify-center" title="Message delivered">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-4 h-4 rounded-sm border-2 border-gray-300 animate-pulse" title="Sending..."></div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 text-sm">Agent Preview</h3>
-                <p className="text-xs text-gray-500">Your agent will appear here as you build it</p>
+            </motion.div>
+          ))}
+          
+          <div ref={messagesEndRef} />
+          
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-start"
+            >
+              <div className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
               </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Input */}
+        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+          <div className="flex space-x-3">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Describe your agent idea and I'll help you build it..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
+              disabled={!websocketService.isConnected() && wsConnectionStatus !== 'connecting'}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading || !websocketService.isConnected()}
+              className="px-4 py-2 bg-gradient-to-r from-coral-600 to-brick-600 text-white rounded-lg hover:from-coral-700 hover:to-brick-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <PaperAirplaneIcon className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Connection warning */}
+          {!websocketService.isConnected() && wsConnectionStatus !== 'connecting' && (
+            <div className="mt-2 text-sm text-red-600 flex items-center space-x-1">
+              <ExclamationTriangleIcon className="w-4 h-4" />
+              <span>Not connected to AI. Messages may not be processed.</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Panel - Agent Preview */}
+      <div className="w-2/5 bg-white flex flex-col min-h-0">
+        {/* Preview Header */}
+        <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+              <SparklesIcon className="w-3 h-3 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-sm">Agent Preview</h3>
+              <p className="text-xs text-gray-500">Your agent will appear here as you build it</p>
             </div>
           </div>
+        </div>
 
-          {/* Preview Content - Fixed, no scrolling */}
-          <div className="flex-1 p-4 flex items-center justify-center">
-            <div className="text-center text-gray-400">
-              <SparklesIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p className="text-sm">Start describing your agent to see the preview</p>
-            </div>
+        {/* Preview Content - Fixed, no scrolling */}
+        <div className="flex-1 p-4 flex items-center justify-center">
+          <div className="text-center text-gray-400">
+            <SparklesIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="text-sm">Start describing your agent to see the preview</p>
           </div>
         </div>
       </div>

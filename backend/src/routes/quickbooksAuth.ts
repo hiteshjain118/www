@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { QuickBooksAuthService } from '../qbo/quickbooksAuth';
 import { AuthMiddleware } from '../middleware/auth';
-import { log } from '../utils/logger';
+import { enhancedLogger as log } from '../utils/logger';
 import { config } from '../config';
+import { QBProfile } from '../types/profiles';
 
 const router = Router();
 const qboService = new QuickBooksAuthService();
@@ -86,14 +87,15 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     if (tokenResult.success && tokenResult.data) {
       // Store tokens
       // get logged in coralbricks user here 
-      await qboService.storeTokens(
+      const profile = await QBProfile.upsert_from_realm_id(
+        {
+          cbid: ownerId
+        },
         realmId, 
-        tokenResult.data, 
-        null, // cbId
-        ownerId
+        tokenResult.data,         
       );
       
-      log.info(`Successfully connected to QuickBooks company for ownerId: ${ownerId} (realm: ${realmId})`);
+      log.info(`Successfully connected to QuickBooks company for ownerId: ${ownerId} (realm: ${realmId}), qbProfile: ${profile.cbId.toString()}`);
       
       // Redirect back to frontend profile page with success message
       res.redirect(`${config.frontendUrl}/profile?connected=true&realm_id=${realmId}`);

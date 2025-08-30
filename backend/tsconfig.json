@@ -24,15 +24,12 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "types": ["jest", "node"],
-    "baseUrl": ".",
-    "paths": {
-      "coralbricks-common": ["../../common_js/dist"]
-    }
+    "baseUrl": "."
   },
   "include": [
     "src/**/*",
     "tests/**/*"
-  ],
+, "../../common_js/src/prisma/prismaService.ts"  ],
   "exclude": [
     "node_modules",
     "dist"

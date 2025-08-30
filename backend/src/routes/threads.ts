@@ -1,13 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { AuthMiddleware } from '../middleware/auth';
-import { threadsService } from '../services/threadsService';
-import { PrismaService } from '../services/prismaService';
-import { PrismaClient } from '@prisma/client';
-import { logger } from '../utils/logger';
+import { ThreadService, PrismaService } from 'coralbricks-common';
+import { enhancedLogger as logger } from '../utils/logger';
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();
-const prisma = new PrismaClient();
+const prisma = PrismaService.getInstance();
 
 // Apply auth middleware to all routes
 router.use(authMiddleware.requireCoralBricksAuth);
@@ -25,17 +23,12 @@ router.get('/threads', async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-
     // Use the cbid directly from the authenticated user
     const userCbid = BigInt(req.user.cbid);
 
-    const result = await threadsService.getAllThreads(userCbid);
-    
-    if (result.success) {
-      res.json(result);
-    } else {
-      res.status(500).json(result);
-    }
+    const result = await ThreadService.getInstance().getThreadsByOwnerId(userCbid);
+
+    res.json(result);
   } catch (error) {
     logger.error('Error in GET /threads:', error);
     res.status(500).json({ 
@@ -71,13 +64,9 @@ router.get('/thread/:cbid', async (req: Request, res: Response): Promise<void> =
     // Use the cbid directly from the authenticated user
     const userCbid = BigInt(req.user.cbid);
 
-    const result = await threadsService.getThreadById(BigInt(cbid), userCbid);
+    const result = await ThreadService.getInstance().getThread(BigInt(cbid));
     
-    if (result.success) {
-      res.json(result);
-    } else {
-      res.status(404).json(result);
-    }
+    res.json(result);
   } catch (error) {
     logger.error('Error in GET /thread/:cbid:', error);
     res.status(500).json({ 
@@ -104,13 +93,14 @@ router.post('/thread/create', async (req: Request, res: Response): Promise<void>
     // Use the cbid directly from the authenticated user
     const userCbid = BigInt(req.user.cbid);
 
-    const result = await threadsService.createThread(userCbid);
+    const result = await ThreadService.getInstance().createThread({
+      ownerId: userCbid
+    });
     
-    if (result.success) {
-      res.status(201).json(result);
-    } else {
-      res.status(500).json(result);
-    }
+    res.status(201).json({
+      success: true,
+      data: { cbId: result.cbId.toString() }
+    });
   } catch (error) {
     logger.error('Error in POST /thread/create:', error);
     res.status(500).json({ 

@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 };
 
 import { config, validateConfig } from './config';
-import { log } from './utils/logger';
+import { enhancedLogger as log } from './utils/logger';
 import { AuthMiddleware } from './middleware/auth';
 import { startInternalServer } from './internal-server';
 
@@ -224,27 +224,26 @@ async function startServer() {
     
     if (missingVars.length > 0) {
       log.warn(`Missing environment variables: ${missingVars.join(', ')}`);
-      console.warn(`Warning: Missing environment variables: ${missingVars.join(', ')}`);
-      console.warn('Please set these variables before running the application.');
+      log.warn(`Warning: Missing environment variables: ${missingVars.join(', ')}`);
+      log.warn('Please set these variables before running the application.');
     }
 
     if (!config.jwtSecret || config.jwtSecret === 'dev-secret-key-change-in-production') {
       log.warn('Using default JWT secret. Change JWT_SECRET in production.');
-      console.warn('Warning: Using default JWT secret. Change JWT_SECRET in production.');
+      log.warn('Warning: Using default JWT secret. Change JWT_SECRET in production.');
     }
 
     // Start main API server on port 3000
     const mainServer = app.listen(config.port, () => {
-      log.info(`CoralBricks Authentication Service started on port ${config.port}`);
-      console.log(`🚀 CoralBricks Authentication Service started on port ${config.port}`);
-      console.log(`📖 API Documentation: http://localhost:${config.port}/`);
-      console.log(`🏥 Health Check: http://localhost:${config.port}/health`);
-      console.log(`📊 Status: http://localhost:${config.port}/status`);
-      console.log(`🔐 Note: All endpoints use cbid parameter for authentication`);
+      log.info(`🚀 CoralBricks Authentication Service started on port ${config.port}`);
+      log.info(`📖 API Documentation: http://localhost:${config.port}/`);
+      log.info(`🏥 Health Check: http://localhost:${config.port}/health`);
+      log.info(`📊 Status: http://localhost:${config.port}/status`);
+      log.info(`🔐 Note: All endpoints use cbid parameter for authentication`);
       
       if (config.nodeEnv === 'development') {
-        console.log(`🌍 Environment: ${config.nodeEnv}`);
-        console.log(`📝 Logs: ${config.logFile}`);
+        log.info(`🌍 Environment: ${config.nodeEnv}`);
+        log.info(`📝 Logs: ${config.logFile}`);
       }
     });
 
@@ -258,7 +257,7 @@ async function startServer() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error(`Failed to start server: ${errorMessage}`, { error: String(error) });
-    console.error(`❌ Failed to start server: ${errorMessage}`);
+    log.error(`❌ Failed to start server: ${errorMessage}`);
     process.exit(1);
   }
 }
@@ -266,7 +265,7 @@ async function startServer() {
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   log.info('SIGTERM received, shutting down gracefully');
-  console.log('🛑 SIGTERM received, shutting down gracefully');
+  log.info('🛑 SIGTERM received, shutting down gracefully');
   
   // Close both servers gracefully
   if ((global as any).mainServer) {
@@ -285,7 +284,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   log.info('SIGINT received, shutting down gracefully');
-  console.log('🛑 SIGINT received, shutting down gracefully');
+  log.info('🛑 SIGINT received, shutting down gracefully');
   
   // Close both servers gracefully
   if ((global as any).mainServer) {
@@ -305,13 +304,13 @@ process.on('SIGINT', () => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   log.error(`Uncaught Exception: ${error.message}`, { error: String(error) });
-  console.error(`💥 Uncaught Exception: ${error.message}`);
+  log.error(`💥 Uncaught Exception: ${error.message}`);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   log.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`, { reason: String(reason) });
-  console.error(`💥 Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  log.error(`💥 Unhandled Rejection at: ${promise}, reason: ${reason}`);
   process.exit(1);
 });
 

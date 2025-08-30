@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "description": "Monorepo for CoralBricks authentication service",
   "private": true,
-  "workspaces": [
-    "backend",
-    "frontend"
-  ],
+
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",

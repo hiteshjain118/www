@@ -77,7 +77,18 @@ class ApiClient {
       });
 
       const result = await response.json();
-      return result;
+      
+      // Check if the response is already in ApiResponse format
+      if (result && typeof result === 'object' && 'success' in result) {
+        return result;
+      }
+      
+      // If not, wrap it in ApiResponse format
+      return {
+        success: true,
+        data: result,
+        error: undefined
+      };
     } catch (error) {
       return {
         success: false,
@@ -101,7 +112,18 @@ class ApiClient {
       console.log(`API response status: ${response.status}`);
       const result = await response.json();
       console.log('API response data:', result);
-      return result;
+      
+      // Check if the response is already in ApiResponse format
+      if (result && typeof result === 'object' && 'success' in result) {
+        return result;
+      }
+      
+      // If not, wrap it in ApiResponse format
+      return {
+        success: true,
+        data: result,
+        error: undefined
+      };
     } catch (error) {
       console.error('API request error:', error);
       return {

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import axios, { AxiosResponse } from 'axios';
 import { IRemoteHTTPConnection, IRetriever } from '../types';
-import { log } from '../utils/logger';
+import { enhancedLogger as log } from '../utils/logger';
 import { SupabaseStorageService } from './supabaseStorage';
 
 export abstract class HTTPRetriever implements IRetriever {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CoralBricksAuthService } from '../services/coralbricksAuth';
 import { AuthUser, ApiResponse } from '../types';
-import { log } from '../utils/logger';
+import { enhancedLogger as log } from '../utils/logger';
 
 // Extend Request interface to include user
 declare global {

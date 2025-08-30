@@ -9,7 +9,7 @@ import compression from 'compression';
 };
 
 import { config } from './config';
-import { log } from './utils/logger';
+import { enhancedLogger as log } from './utils/logger';
 
 // Import internal routes
 import toolsRoutes from './routes/tools';
@@ -129,12 +129,11 @@ export async function startInternalServer() {
   try {
     // Start listening on internal port
     const server = internalApp.listen(config.internalPort, '127.0.0.1', () => {
-      log.info(`CoralBricks Internal Tools API started on port ${config.internalPort}`);
-      console.log(`🔧 CoralBricks Internal Tools API started on port ${config.internalPort}`);
-      console.log(`📖 Internal API Documentation: http://localhost:${config.internalPort}/`);
-      console.log(`🏥 Internal Health Check: http://localhost:${config.internalPort}/health`);
-      console.log(`🛠️  Available Tools: http://localhost:${config.internalPort}/tools`);
-      console.log(`🔒 Note: Internal API bound to localhost only`);
+      log.info(`🔧 CoralBricks Internal Tools API started on port ${config.internalPort}`);
+      log.info(`📖 Internal API Documentation: http://localhost:${config.internalPort}/`);
+      log.info(`🏥 Internal Health Check: http://localhost:${config.internalPort}/health`);
+      log.info(`🛠️  Available Tools: http://localhost:${config.internalPort}/tools`);
+      log.info(`🔒 Note: Internal API bound to localhost only`);
     });
 
     return server;
@@ -142,7 +141,7 @@ export async function startInternalServer() {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error(`Failed to start internal server: ${errorMessage}`, { error: String(error) });
-    console.error(`❌ Failed to start internal server: ${errorMessage}`);
+    log.error(`❌ Failed to start internal server: ${errorMessage}`);
     throw error;
   }
 }

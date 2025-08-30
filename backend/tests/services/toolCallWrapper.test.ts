@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import { AxiosError } from 'axios';
-import { IToolCall, ToolCallResult } from 'coralbricks-common';
+import { IToolCall, ToolCallResult } from "coralbricks-common";
 import { ToolCallWrapper, TOOL_REGISTRY } from '../../src/services/toolCallWrapper';
-import { QBOProfile } from '../../src/types/profiles';
+import { QBProfile } from '../../src/types/profiles';
 import { QBDataSchemaRetriever } from '../../src/qbo/qbDataSchemaRetriever';
 import { QBDataSizeRetriever } from '../../src/qbo/qbDataSizeRetriever';
 import { QBUserDataRetriever } from '../../src/qbo/qbUserDataRetriever';
@@ -26,7 +26,7 @@ const MockedQBUserDataRetriever = QBUserDataRetriever as jest.MockedClass<typeof
 
 describe('ToolCallWrapper', () => {
   let mockResponse: jest.Mocked<Response>;
-  let mockQBOProfile: jest.Mocked<QBOProfile>;
+  let mockQBOProfile: jest.Mocked<QBProfile>;
   let wrapper: ToolCallWrapper;
   
   const mockThreadId = BigInt(123);

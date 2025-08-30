@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { QuickBooksAuthService } from '../qbo/quickbooksAuth';
 import { log } from '../utils/logger';
-import { CBUser, QBOProfile } from '../types/profiles';
+import { CBUser, QBProfile } from '../types/profiles';
 
 const router = Router();
 const qboService = new QuickBooksAuthService();
@@ -26,7 +26,7 @@ router.delete('/disconnect/:cbid/:qbo_profile_id', async (req: Request, res: Res
     
     log.info(`Disconnecting QuickBooks company for cbid: ${qbo_profile_id} (ownerId: ${ownerId})`);
     
-    const qbo_profile = await QBOProfile.load_profile({cbid: ownerId}, qbo_profile_id);
+    const qbo_profile = await QBProfile.load_profile({cbid: ownerId}, qbo_profile_id);
     const disconnectResult = await qbo_profile.disconnectCompany();
     
     if (disconnectResult) {
@@ -78,7 +78,7 @@ router.get('/companies', async (req: Request, res: Response): Promise<void> => {
     
     log.info(`Fetching QuickBooks companies for cbid: ${ownerId}`);
     
-    const companiesResult = await QBOProfile.getCompanies(ownerId);
+    const companiesResult = await QBProfile.getCompanies(ownerId);
     
     if (companiesResult) {
       res.json({
@@ -127,7 +127,7 @@ router.get('/status/:cbid/:qbo_profile_id', async (req: Request, res: Response):
     
     log.info(`Checking QuickBooks company status for cbid: ${qbo_profile_id} (ownerId: ${ownerId})`);
     
-    const qbo_profile = await QBOProfile.load_profile({cbid: ownerId}, qbo_profile_id);
+    const qbo_profile = await QBProfile.load_profile({cbid: ownerId}, qbo_profile_id);
     const access_token = await qbo_profile.getValidAccessTokenWithRefresh();
       
     res.json({
@@ -170,7 +170,7 @@ router.get('/user', async (req: Request, res: Response): Promise<void> => {
     log.info(`Fetching QuickBooks user info for cbid: ${ownerId}`);
     
     const cb_user = await CBUser.load_profile({cbid: ownerId}, ownerId);
-    const qbo_profile = await QBOProfile.load_any_from_cb_owner({cbid: ownerId}, cb_user);
+    const qbo_profile = await QBProfile.load_any_from_cb_owner({cbid: ownerId}, cb_user);
     if (qbo_profile) {
       const is_connected = await qbo_profile.isCompanyConnected();
       const realmId = qbo_profile.realmId;

@@ -1,5 +1,5 @@
-import { QBOProfileService } from "../qbo";
-import { PrismaService } from "../services/prismaService";
+import { QboProfile, QboProfileService, QboProfileSandboxService } from "coralbricks-common";
+import { PrismaService, ProfileService } from "coralbricks-common";
 import { QuickBooksAuthService } from "../qbo/quickbooksAuth";
 import { ApiResponse, QBOCompany } from ".";
 import { log } from "../utils/logger";
@@ -72,7 +72,7 @@ export enum RemotePlatform {
         if (viewer_context.cbid !== cbid) {
             throw new Error("Cant load profile for another user");
         }
-        const profile = await PrismaService.getInstance().getUserProfile(cbid);
+        const profile = await ProfileService.getInstance().getUserProfile(cbid);
         if (!profile) {
             throw new Error("Profile not found");
         }
@@ -104,25 +104,25 @@ export enum RemotePlatform {
     abstract get_base_url(): string;
   }
   
-  export class QBOProfile extends RemoteProfile {
-    realmId?: string;
+  export class QBProfile extends RemoteProfile {
+    realmId: string;
     accessToken?: string;
     refreshToken?: string;
     expiresIn?: number;
     refreshTokenExpiresIn?: number;
-    isSandbox?: boolean;
-    updatedAt?: Date;
+    isSandbox: boolean;
+    updatedAt: Date;
     private constructor(
         viewer_context: ViewerContext, 
         cbId: bigint, 
         ownerId: bigint,
-        realmId?: string,
-        accessToken?: string,
-        refreshToken?: string,
-        expiresIn?: number,
-        refreshTokenExpiresIn?: number,
-        isSandbox?: boolean,
-        updatedAt?: Date,
+        realmId: string,
+        accessToken: string,
+        refreshToken: string,
+        expiresIn: number,
+        refreshTokenExpiresIn: number,
+        isSandbox: boolean,
+        updatedAt: Date,
     ) {
         super(viewer_context, RemotePlatform.QBO, cbId, ownerId);
         this.realmId = realmId;
@@ -140,48 +140,121 @@ export enum RemotePlatform {
         return `${url}/${this.realmId}`;
     }
 
-    static async load_profile(viewer_context: ViewerContext, qbo_profile_id: bigint): Promise<QBOProfile> {
-        const is_sandbox = process.env.QBO_SANDBOX === "true";
-        const profile = await QBOProfileService.getProfile(qbo_profile_id, is_sandbox);
-        
-        if (!profile) {
-            throw new Error("Profile not found");
+    static async load_profile(viewer_context: ViewerContext, qbo_profile_id: bigint): Promise<QBProfile> {
+        if (this.is_sandbox()) {
+            const profile = await QboProfileSandboxService.getInstance().getQboProfileSandbox(viewer_context.cbid);
+            return new QBProfile(
+                viewer_context, 
+                qbo_profile_id, 
+                profile!.ownerId, 
+                profile!.realmId!, 
+                profile!.accessToken!, 
+                profile!.refreshToken!, 
+                profile!.expiresIn!,  
+                profile!.refreshTokenExpiresIn!, 
+                true,
+                profile!.updatedAt
+            );
         }
-        if (profile.ownerId !== viewer_context.cbid) {
-            throw new Error("Cant load profile for another user");
-        }
-        const to_ret = new QBOProfile(
+        const profile = await QboProfileService.getInstance().getQboProfile(qbo_profile_id);
+        return new QBProfile(
             viewer_context, 
             qbo_profile_id, 
-            profile.ownerId, 
-            profile.realmId || undefined, 
-            profile.accessToken || undefined, 
-            profile.refreshToken || undefined, 
-            profile.expiresIn || undefined,  
-            profile.refreshTokenExpiresIn || undefined, 
-            is_sandbox,
-            profile.updatedAt || undefined
+            profile!.ownerId, 
+            profile!.realmId!, 
+            profile!.accessToken!, 
+            profile!.refreshToken!, 
+            profile!.expiresIn!,  
+            profile!.refreshTokenExpiresIn!, 
+            false,
+            profile!.updatedAt
         );
-        return to_ret;
     }
 
-    static async load_any_from_cb_owner(viewer_context: ViewerContext, cb_owner: CBUser): Promise<QBOProfile> {
-        const profiles = await QBOProfileService.getProfilesByOwner(cb_owner.cbid as bigint);
+    static async upsert_from_realm_id(
+        viewer_context: ViewerContext, 
+        realm_id: string, 
+        token_data: any, 
+    ): Promise<QBProfile> {
+        if (QBProfile.is_sandbox()) {
+            const profile = await QboProfileSandboxService.getInstance().upsertQboProfileSandbox({
+                ownerId: viewer_context.cbid,
+                realmId: realm_id,
+                accessToken: token_data.access_token,
+                refreshToken: token_data.refresh_token,
+                expiresIn: token_data.expires_in,
+                refreshTokenExpiresIn: token_data.refresh_token_expires_in || token_data.expires_in * 2
+            });
+            return new QBProfile(
+                viewer_context,
+                profile.cbId,
+                profile.ownerId,
+                profile.realmId!,
+                profile.accessToken!,
+                profile.refreshToken!,
+                profile.expiresIn!,
+                profile.refreshTokenExpiresIn!,
+                true,
+                profile.updatedAt
+            );
+        }   
+        const profile = await QboProfileService.getInstance().upsertQboProfile({
+            ownerId: viewer_context.cbid,
+            realmId: realm_id,
+            accessToken: token_data.access_token,
+            refreshToken: token_data.refresh_token,
+            expiresIn: token_data.expires_in,
+            refreshTokenExpiresIn: token_data.refresh_token_expires_in || token_data.expires_in * 2
+        });
+        return new QBProfile(
+            viewer_context,
+            profile.cbId,
+            profile.ownerId,
+            profile.realmId!,
+            profile.accessToken!,
+            profile.refreshToken!,
+            profile.expiresIn!,
+            profile.refreshTokenExpiresIn!,
+            false,
+            profile.updatedAt
+        );
+    }
+    static async load_any_from_cb_owner(viewer_context: ViewerContext, cb_owner: CBUser): Promise<QBProfile> {
+        if (this.is_sandbox()) {
+            const profiles = await QboProfileSandboxService.getInstance().getQboProfileSandboxByOwnerId(cb_owner.cbid as bigint);
+            if (profiles.length === 0) {
+                throw new Error("No profiles found");
+            }
+            const profile = profiles[0]; // Take the first profile
+            return new QBProfile(
+                viewer_context, 
+                profile.cbId, 
+                profile.ownerId, 
+                profile.realmId!, 
+                profile.accessToken!, 
+                profile.refreshToken!, 
+                profile.expiresIn!,  
+                profile.refreshTokenExpiresIn!, 
+                false,
+                profile.updatedAt
+            );
+        }
+        const profiles = await QboProfileService.getInstance().getQboProfilesByOwnerId(cb_owner.cbid as bigint);
         if (profiles.length === 0) {
             throw new Error("No profiles found");
         }
-        const profile = profiles[0];
-        return new QBOProfile(
+        const profile = profiles[0]; // Take the first profile
+        return new QBProfile(
             viewer_context, 
             profile.cbId, 
-            cb_owner.cbid as bigint, 
-            profile.realmId || undefined, 
-            profile.accessToken || undefined, 
-            profile.refreshToken || undefined, 
-            profile.expiresIn || undefined, 
-            profile.refreshTokenExpiresIn || undefined, 
-            QBOProfile.is_sandbox(),
-            profile.updatedAt || undefined
+            profile.ownerId, 
+            profile.realmId!, 
+            profile.accessToken!, 
+            profile.refreshToken!, 
+            profile.expiresIn!,  
+            profile.refreshTokenExpiresIn!, 
+            false,
+            profile.updatedAt
         );
     }
 
@@ -189,8 +262,8 @@ export enum RemotePlatform {
         return process.env.QBO_SANDBOX === "true";
     }
 
-    async load_authenticated_profile(viewer_context: ViewerContext, qbo_profile_id: bigint): Promise<QBOProfile> {
-        const profile = await QBOProfile.load_profile(viewer_context, qbo_profile_id);
+    async load_authenticated_profile(viewer_context: ViewerContext, qbo_profile_id: bigint): Promise<QBProfile> {
+        const profile = await QBProfile.load_profile(viewer_context, qbo_profile_id);
         const quickbooks_auth_service = new QuickBooksAuthService();
         const refreshed_tokens = await quickbooks_auth_service.refreshAndStoreTokens(profile);
         profile.accessToken = refreshed_tokens;
@@ -202,9 +275,16 @@ export enum RemotePlatform {
    */
     static async getCompanies(ownerId: bigint): Promise<QBOCompany[]> {
         log.info('Fetching connected QuickBooks companies from QBO profiles');
-        
-        const profiles = await QBOProfileService.getProfilesByOwner(ownerId, isProduction);
-        const companies: QBOCompany[] = profiles.map((profile: any) => ({
+        let profiles: QboProfile[] | any[];
+        if (this.is_sandbox()) {
+            profiles = await QboProfileSandboxService.getInstance().getQboProfileSandboxByOwnerId(ownerId);
+        } else {
+            profiles = await QboProfileService.getInstance().getQboProfilesByOwnerId(ownerId);
+        }
+        if (!profiles || profiles.length === 0) {
+            return [];
+        }
+        const companies: QBOCompany[] = profiles.map(profile => ({
             qbo_profile_id: profile.cbId,
             realm_id: profile.realmId || '',
             company_name: `Company ${profile.realmId}`,
@@ -254,10 +334,30 @@ export enum RemotePlatform {
      */
     async disconnectCompany(): Promise<boolean> {
         log.info(`Disconnecting company: ${this.realmId}`);
-        
-        await QBOProfileService.deleteProfile(this.cbId, isProduction);
-        
+        if (this.isSandbox) {
+            await QboProfileSandboxService.getInstance().deleteQboProfileSandbox(this.cbId);
+        } else {
+            await QboProfileService.getInstance().deleteQboProfile(this.cbId);
+        }
         log.info(`Company ${this.realmId} disconnected successfully`);
         return true;
     }
+
+      /**
+   * Store OAuth tokens for a company in the appropriate QBO profiles table
+   */
+  async storeTokens(realmId: string, tokenData: any, cbId: bigint | null, ownerId: bigint): Promise<void> {
+    
+    log.info(`Storing tokens for realm: ${realmId} in ${isProduction ? 'production' : 'sandbox'} table`);
+    
+    await QBProfile.upsert_from_realm_id(
+        this.viewer_context, 
+        realmId, 
+        tokenData,
+    );
+    
+    
+    log.info(`Tokens stored successfully for realm: ${realmId}`);
+  }
+
 }

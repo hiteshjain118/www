@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { AuthMiddleware } from '../middleware/auth';
 import { PrismaService } from 'coralbricks-common';
-import { logger } from '../utils/logger';
+import { enhancedLogger as logger } from '../utils/logger';
 
 const router = Router();
 const authMiddleware = new AuthMiddleware();

@@ -2,7 +2,7 @@ import { AxiosError } from "axios";
 import { IToolCall, ToolCallResult } from "coralbricks-common";
 import { log } from "../utils/logger";
 import { Response } from "express";
-import { QBOProfile } from "../types/profiles";
+import { QBProfile } from "../types/profiles";
 import { QBDataSchemaRetriever } from "../qbo/qbDataSchemaRetriever";
 import { QBDataSizeRetriever } from "../qbo/qbDataSizeRetriever";
 import { QBUserDataRetriever } from "../qbo/qbUserDataRetriever";
@@ -20,7 +20,7 @@ export class ToolCallWrapper {
     private toolCallId: string, 
     private tool_name: string,
     private toolArgs: any,
-    private qboProfile: QBOProfile,
+    private qboProfile: QBProfile,
     private query_type: string
   ) {}
 
