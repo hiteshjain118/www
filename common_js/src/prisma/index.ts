@@ -37,5 +37,5 @@ export { ModelEventService } from './modelEventService';
 export type { ModelEvent } from './modelEventService';
 
 // Task service
-export { TaskService } from './taskService';
+export { TaskService, TaskStatus } from './taskService';
 export type { Task, TaskWithDependencies } from './taskService'; 

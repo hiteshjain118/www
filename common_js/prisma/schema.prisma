@@ -147,9 +147,6 @@ model ModelEvent {
   cbProfileId    BigInt?  @map("cb_profile_id") @db.BigInt
   assistantMessageId BigInt? @map("assistant_message_id") @db.BigInt
 
-  // Relations
-  tasks          Task[]
-
   @@map("model_events")
   @@index([threadId], name: "idx_model_events_thread_id")
   @@index([senderId], name: "idx_model_events_sender_id")
@@ -164,14 +161,11 @@ model Task {
   toolCallName            String   @map("tool_call_name") @db.Text
   toolCallArgs            Json     @map("tool_call_args")
   handleForModel          String   @map("handle_for_model") @db.Text
-  requestModelEventId     BigInt   @map("request_model_event_id") @db.BigInt
+  status                  String   @map("status") @db.Text
 
   // Self-referencing relation for dependencies
   deps                    Task[]   @relation("TaskDependencies")
   dependents              Task[]   @relation("TaskDependencies")
-
-  // Relations
-  requestModelEvent       ModelEvent? @relation(fields: [requestModelEventId], references: [cbId])
 
   @@map("tasks")
   @@index([threadId], name: "idx_tasks_thread_id")

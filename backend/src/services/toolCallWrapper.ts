@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import { IToolCall, ToolCallResult } from "coralbricks-common";
+import { IToolCall, TaskService, TaskStatus, ToolCallResult } from "coralbricks-common";
 import { enhancedLogger as log } from "../utils/logger";
 import { Response } from "express";
 import { QBProfile } from "../types/profiles";
@@ -14,6 +14,12 @@ export const TOOL_REGISTRY = {
   'qb_user_data_retriever': QBUserDataRetriever.tool_description()
 } as const;
 
+enum QueryType {
+  RETRIEVE = "retrieve",
+  SCHEDULE = "schedule",
+  VALIDATE = "validate"
+}
+
 export class ToolCallWrapper {
   constructor(
     private threadId: bigint, 
@@ -21,7 +27,8 @@ export class ToolCallWrapper {
     private tool_name: string,
     private toolArgs: any,
     private qboProfile: QBProfile,
-    private query_type: string
+    private query_type: QueryType,
+    private scheduled_delay_ms: number = 1  
   ) {}
 
   async run(res: Response): Promise<void> {
@@ -63,12 +70,33 @@ export class ToolCallWrapper {
     try {
       const tool_instance = this.get_tool_instance();
       
-      if (this.query_type === "retrieve") {
-        tool_call_result = await tool_instance.call_tool();
-      } else {
+      if (this.query_type === QueryType.VALIDATE) {
         await tool_instance.validate();
         tool_call_result = ToolCallResult.success(this.tool_name, {}, this.toolCallId, this.threadId);
+      } else if (this.query_type === QueryType.SCHEDULE) {
+        await tool_instance.validate();
+        const task = await TaskService.getInstance().createTask({
+          threadId: this.threadId,
+          toolCallId: this.toolCallId,
+          toolCallName: this.tool_name,
+          toolCallArgs: this.toolArgs,
+          handleForModel: this.toolCallId + this.tool_name,
+        });
+        tool_call_result = ToolCallResult.success(this.tool_name, {"handle_name": task.handleForModel}, this.toolCallId, this.threadId);
+        // schedule to run tool in background 
+        setTimeout(async () => {
+          try {
+            tool_call_result = await tool_instance.call_tool();
+            await TaskService.getInstance().updateTaskStatus(task.cbId, TaskStatus.COMPLETED);
+          } catch (error) {
+            await TaskService.getInstance().updateTaskStatus(task.cbId, TaskStatus.FAILED);
+            log.error(`Error executing tool ${this.tool_name} in task ${task.cbId}, threadId: ${this.threadId}, toolCallId: ${this.toolCallId}, error: ${error}`);
+          }
+        }, this.scheduled_delay_ms);
+      } else if (this.query_type === QueryType.RETRIEVE) {
+        tool_call_result = await tool_instance.call_tool();
       }
+      throw new Error('Invalid query type');
     } catch (error) {
       if (error instanceof AxiosError) {
         tool_call_result = ToolCallResult.error(

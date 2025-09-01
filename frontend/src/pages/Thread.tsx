@@ -29,10 +29,18 @@ const Thread: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isThreadLoading, setIsThreadLoading] = useState(false);
+  const [canSendMessage, setCanSendMessage] = useState(true);
   const [currentThread, setCurrentThread] = useState<ThreadType | null>(null);
   const [wsConnectionStatus, setWsConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Check if user can send a message (only after assistant messages)
+  const checkCanSendMessage = (messages: Message[]): boolean => {
+    if (messages.length === 0) return true; // Allow first message
+    const lastMessage = messages[messages.length - 1];
+    return lastMessage.sender === 'ai'; // Can only send after AI messages
+  };
   
 
 
@@ -52,6 +60,11 @@ const Thread: React.FC = () => {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Update canSendMessage state when messages change
+  useEffect(() => {
+    setCanSendMessage(checkCanSendMessage(messages));
   }, [messages]);
 
 
@@ -227,7 +240,7 @@ const Thread: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !user?.cbid || !threadId) return;
+    if (!inputMessage.trim() || !user?.cbid || !threadId || !canSendMessage) return;
 
     const messageText = inputMessage;
     const messageId = Date.now().toString();
@@ -471,7 +484,6 @@ const Thread: React.FC = () => {
           )}
         </div>
         )}
-
         {/* Input */}
         <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
           <div className="flex space-x-3">
@@ -480,13 +492,13 @@ const Thread: React.FC = () => {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Describe your agent idea and I'll help you build it..."
+              placeholder={canSendMessage ? "Describe your agent idea and I'll help you build it..." : "Please wait for the AI to respond..."}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-              disabled={!websocketService.isConnected() && wsConnectionStatus !== 'connecting' || isThreadLoading}
+              disabled={!websocketService.isConnected() && wsConnectionStatus !== 'connecting' || isThreadLoading || !canSendMessage}
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading || !websocketService.isConnected() || isThreadLoading}
+              disabled={!inputMessage.trim() || isLoading || !websocketService.isConnected() || isThreadLoading || !canSendMessage}
               className="px-4 py-2 bg-gradient-to-r from-coral-600 to-brick-700 text-white rounded-lg hover:from-coral-700 hover:to-brick-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <PaperAirplaneIcon className="w-4 h-4" />
@@ -498,6 +510,14 @@ const Thread: React.FC = () => {
             <div className="mt-2 text-sm text-red-600 flex items-center space-x-1">
               <ExclamationTriangleIcon className="w-4 h-4" />
               <span>Not connected to AI. Messages may not be processed.</span>
+            </div>
+          )}
+          
+          {/* Turn-based chat warning */}
+          {!canSendMessage && (
+            <div className="mt-2 text-sm text-blue-600 flex items-center space-x-1">
+              <ExclamationTriangleIcon className="w-4 h-4" />
+              <span>Please wait for the AI to respond before sending another message.</span>
             </div>
           )}
         </div>

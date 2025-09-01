@@ -86,7 +86,7 @@ const InputPromptList = React.forwardRef<{ expandAll: () => void; collapseAll: (
               <div className="flex items-center space-x-3">
                 <span className="text-sm font-medium text-gray-600">#{index + 1}</span>
                 <span className="text-sm font-semibold text-blue-600 capitalize">
-                  Role: {item.role || 'Unknown'}
+                  {item.role === 'tool' ? `Tool ${item.name || 'Unknown'}` : `Role: ${item.role || 'Unknown'}`}
                 </span>
               </div>
               <button
@@ -316,9 +316,25 @@ const InternalDebugger: React.FC = () => {
       {event.request_data?.tool_calls && (
         <div className="mb-4">
           <h4 className="text-md font-medium text-gray-800 mb-2">Tool Calls</h4>
-          <pre className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap break-words">
-            {JSON.stringify(event.request_data.tool_calls, null, 2)}
-          </pre>
+          <div className="space-y-2">
+            {Array.isArray(event.request_data.tool_calls) ? event.request_data.tool_calls.map((toolCall: any, index: number) => (
+              <div key={index} className="bg-gray-50 p-3 rounded border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-blue-600">
+                    Tool: {toolCall.function?.name || toolCall.name || 'Unknown'}
+                  </span>
+                  <span className="text-xs text-gray-500">ID: {toolCall.id || index}</span>
+                </div>
+                <pre className="text-sm whitespace-pre-wrap break-words">
+                  {JSON.stringify(toolCall, null, 2)}
+                </pre>
+              </div>
+            )) : (
+              <pre className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap break-words">
+                {JSON.stringify(event.request_data.tool_calls, null, 2)}
+              </pre>
+            )}
+          </div>
         </div>
       )}
 

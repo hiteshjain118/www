@@ -99,9 +99,6 @@ export class ModelEventService {
     try {
       return await prisma.modelEvent.findUnique({
         where: { cbId },
-        include: {
-          tasks: true,
-        },
       });
     } catch (error) {
       console.error('Error getting model event:', error);
@@ -119,9 +116,6 @@ export class ModelEventService {
       return await prisma.modelEvent.findMany({
         where: { threadId },
         orderBy: { createdAt: 'desc' },
-        include: {
-          tasks: true,
-        },
       });
     } catch (error) {
       console.error('Error getting model events by thread ID:', error);
@@ -139,9 +133,6 @@ export class ModelEventService {
       return await prisma.modelEvent.findMany({
         where: { senderId },
         orderBy: { createdAt: 'desc' },
-        include: {
-          tasks: true,
-        },
       });
     } catch (error) {
       console.error('Error getting model events by sender ID:', error);
@@ -175,9 +166,6 @@ export class ModelEventService {
       return await prisma.modelEvent.findMany({
         where: { assistantMessageId },
         orderBy: { createdAt: 'desc' },
-        include: {
-          tasks: true,
-        },
       });
     } catch (error) {
       console.error('Error getting model events by assistant message ID:', error);
@@ -200,9 +188,6 @@ export class ModelEventService {
           orderBy: { createdAt: 'desc' },
           take: limit,
           skip: offset,
-          include: {
-            tasks: true,
-          },
         }),
         prisma.modelEvent.count(),
       ]);

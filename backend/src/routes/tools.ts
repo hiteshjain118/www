@@ -69,11 +69,11 @@ router.get('/tools', (req: Request, res: Response) => {
 /**
  * POST /:toolName
  * Executes or validates a specific tool with provided arguments
- * Expected body: { tool_call_id: string, thread_id: string, cbid: string, validate?: boolean, ...tool_specific_args }
+ * Expected body: { tool_call_id: string, thread_id: string, cbid: string, queryType: "retrieve" | "validate" | "schedule", ...tool_specific_args }
  */
 router.post('/:toolName', async (req: Request, res: Response) => {
   const { toolName } = req.params;
-  const { tool_call_id, thread_id, cbid, validate = false, ...toolArgs } = req.body;
+  const { tool_call_id, thread_id, cbid, queryType, ...toolArgs } = req.body;
   const startTime = Date.now();
   const requestId = req.headers['x-request-id'] as string;
   
@@ -84,17 +84,25 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     tool_call_id,
     thread_id,
     cbid,
-    validate,
+    queryType,
     toolArgs,
     body: req.body
   });
 
   try {
     // Validate required parameters
-    if (!cbid || !tool_call_id || !thread_id) {
+    if (!cbid || !tool_call_id || !thread_id || !queryType) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required parameter: cbid, tool_call_id, thread_id'
+        error: 'Missing required parameter: cbid, tool_call_id, thread_id, queryType'
+      });
+    }
+
+    // Validate queryType value
+    if (!['retrieve', 'validate', 'schedule'].includes(queryType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid queryType. Must be one of: retrieve, validate, schedule'
       });
     }
 
@@ -102,9 +110,6 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     const viewerContext = { cbid: BigInt(cbid) };
     const cb_owner = await CBUser.load_profile(viewerContext, BigInt(cbid));
     const qboProfile = await QBProfile.load_any_from_cb_owner(viewerContext, cb_owner);
-
-    // Determine query type based on validate parameter
-    const queryType = validate ? "validate" : "retrieve";
 
     // Create wrapper and execute/validate the tool
     const wrapper = new ToolCallWrapper(
@@ -130,7 +135,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const action = req.body.validate ? 'validating' : 'executing';
+    const action = queryType === 'validate' ? 'validating' : 'executing';
     
     log.error(`[TOOL] Error ${action} tool ${toolName}`, {
       requestId,

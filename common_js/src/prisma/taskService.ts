@@ -1,5 +1,11 @@
 import PrismaService from './client';
 
+export enum TaskStatus {
+  CREATED = "created",
+  COMPLETED = "completed",
+  FAILED = "failed",
+}
+
 export interface Task {
   cbId: bigint;
   threadId: bigint;
@@ -8,7 +14,7 @@ export interface Task {
   toolCallName: string;
   toolCallArgs: any;
   handleForModel: string;
-  requestModelEventId: bigint;
+  status: string;
 }
 
 export interface TaskWithDependencies extends Task {
@@ -35,7 +41,6 @@ export class TaskService {
     toolCallName: string;
     toolCallArgs: any;
     handleForModel: string;
-    requestModelEventId: bigint;
   }): Promise<Task> {
     const prisma = PrismaService.getInstance();
     
@@ -47,7 +52,7 @@ export class TaskService {
           toolCallName: data.toolCallName,
           toolCallArgs: data.toolCallArgs,
           handleForModel: data.handleForModel,
-          requestModelEventId: data.requestModelEventId,
+          status: TaskStatus.CREATED,
         },
       });
     } catch (error) {
@@ -67,7 +72,7 @@ export class TaskService {
       toolCallName: string;
       toolCallArgs: any;
       handleForModel: string;
-      requestModelEventId: bigint;
+      status: TaskStatus;
     }>
   ): Promise<Task> {
     const prisma = PrismaService.getInstance();
@@ -95,7 +100,6 @@ export class TaskService {
         include: {
           deps: true,
           dependents: true,
-          requestModelEvent: true,
         },
       });
     } catch (error) {
@@ -116,7 +120,6 @@ export class TaskService {
         include: {
           deps: true,
           dependents: true,
-          requestModelEvent: true,
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -126,27 +129,7 @@ export class TaskService {
     }
   }
 
-  /**
-   * Get tasks by model event ID
-   */
-  async getTasksByModelEventId(requestModelEventId: bigint): Promise<TaskWithDependencies[]> {
-    const prisma = PrismaService.getInstance();
-    
-    try {
-      return await prisma.task.findMany({
-        where: { requestModelEventId },
-        include: {
-          deps: true,
-          dependents: true,
-          requestModelEvent: true,
-        },
-        orderBy: { createdAt: 'asc' },
-      });
-    } catch (error) {
-      console.error('Error getting tasks by model event ID:', error);
-      throw error;
-    }
-  }
+
 
   /**
    * Add task dependency
@@ -268,10 +251,28 @@ export class TaskService {
       const allTasks = await this.getTasksByThreadId(threadId);
       
       // Filter tasks that have no dependencies or all dependencies are completed
-      // This is a simple implementation - you might want to add a 'status' field to tasks
+      // Now we can also check status for better filtering
       return allTasks.filter(task => task.deps.length === 0);
     } catch (error) {
       console.error('Error getting pending tasks:', error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Update task status
+   */
+  async updateTaskStatus(cbId: bigint, status: TaskStatus): Promise<Task> {
+    const prisma = PrismaService.getInstance();
+    
+    try {
+      return await prisma.task.update({
+        where: { cbId },
+        data: { status },
+      });
+    } catch (error) {
+      console.error('Error updating task status:', error);
       throw error;
     }
   }
