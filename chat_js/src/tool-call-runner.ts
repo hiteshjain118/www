@@ -38,7 +38,7 @@ export class ToolCallRunner {
     const toolCallPromises = toolCalls.map(async (tool_call) => {
       // Handle both standard and custom tool calls
       if (tool_call.type === 'function' && 'function' in tool_call) {
-        const result = await this.run_tool(tool_call.id, tool_call.function.name, tool_call.function.arguments, null);
+        const result = await this.run_tool(tool_call.id, tool_call.function.name, tool_call.function.arguments);
         return { id: tool_call.id, result };
       }
       // Return error for invalid tool calls instead of null

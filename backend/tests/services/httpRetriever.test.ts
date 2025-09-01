@@ -256,7 +256,7 @@ describe('HTTPRetriever', () => {
       );
 
       expect(log.error).toHaveBeenCalledWith(
-        expect.stringContaining('doesnt have a valid access token'),
+        'Access token is invalid. Please re-authenticate.',
         { caller_id: mockCallerId }
       );
     });

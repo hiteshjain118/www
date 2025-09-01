@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { enhancedLogger as log } from '../utils/logger';
 import { CBUser, QBProfile } from '../types/profiles';
-import { ToolCallWrapper, QueryType } from '../services/toolCallWrapper';
-import { TOOL_REGISTRY } from '../services/toolCallWrapper';
+import { QueryType } from 'coralbricks-common';
+import { TOOL_REGISTRY, TCWrapperBackend } from '../services/tcWrapperBackend';
 
 const router = Router();
 
@@ -128,7 +128,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     }
 
     // Create wrapper and execute/validate the tool
-    const wrapper = new ToolCallWrapper(
+    const wrapper = new TCWrapperBackend(
       thread_id, 
       tool_call_id, 
       toolName, 
