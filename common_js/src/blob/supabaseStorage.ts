@@ -28,7 +28,7 @@ export class SupabaseStorageService {
         throw new Error(`Failed to list buckets: ${listError.message}`);
       }
 
-      const bucketExists = buckets?.some(bucket => bucket.name === this.bucketName);
+      const bucketExists = buckets?.some((bucket: any) => bucket.name === this.bucketName);
       
       if (!bucketExists) {
         const { error: createError } = await this.client.storage.createBucket(this.bucketName, {
@@ -98,8 +98,8 @@ export class SupabaseStorageService {
       // Parse JSONL format
       const responses = fileContent
         .split('\n')
-        .filter(line => line.trim())
-        .map(line => JSON.parse(line));
+        .filter((line: string) => line.trim())
+        .map((line: string) => JSON.parse(line));
 
       log.info(`Cache hit for key: ${cacheKey}, found ${responses.length} responses`);
 
@@ -200,7 +200,7 @@ export class SupabaseStorageService {
         throw new Error(`Failed to list cached files: ${error.message}`);
       }
 
-      return data?.map(file => file.name) || [];
+      return data?.map((file: any) => file.name) || [];
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -267,12 +267,12 @@ export class SupabaseStorageService {
       }
 
       const files = data || [];
-      const totalSize = files.reduce((sum, file) => sum + (file.metadata?.size || 0), 0);
+      const totalSize = files.reduce((sum: number, file: any) => sum + (file.metadata?.size || 0), 0);
 
       return {
         fileCount: files.length,
         totalSize,
-        files: files.map(file => ({
+        files: files.map((file: any) => ({
           name: file.name,
           size: file.metadata?.size || 0,
           createdAt: file.created_at || ''

@@ -92,6 +92,10 @@ export class QBUserDataRetriever extends HTTPRetriever implements IToolCall {
     return "Unknown";
   }
 
+  getBlobPath(): string {
+    return this._cache_key();
+  }
+  
   protected _cache_key(): string {
     const params_hash_6chars = crypto
       .createHash('sha256')

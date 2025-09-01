@@ -1,6 +1,7 @@
 export interface IToolCall {
   call_tool(): Promise<ToolCallResult>;
   validate(): Promise<void>;
+  getBlobPath(): string;
 }
 
 // Interface for tool call input (used by chat_js)

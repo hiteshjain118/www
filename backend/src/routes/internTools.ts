@@ -1,6 +1,6 @@
 import express from 'express';
 import { log } from '../utils/logger';
-import { ModelEventService, ModelEvent } from 'coralbricks-common/src/prisma/modelEventService';
+import { ModelEventService, ModelEvent } from 'coralbricks-common';
 
 // Extended interface that includes the tasks relation
 interface ModelEventWithTasks extends ModelEvent {

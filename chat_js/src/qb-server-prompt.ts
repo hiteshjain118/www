@@ -136,43 +136,7 @@ export class QBServerPrompt implements IModelPrompt {
       "improving your understanding of the request.\n\n" +
       
 
-      "# Guidance on Phase: Analysis\n" +
-      "You will enter this phase only after you have retrieved user's data " +
-      "from Quickbooks. You will use the data to run a python function for analysis. " +
-      "Your method name should always be 'analyze' and it should only " +
-      "return a pandas dataframe. If you make any assumptions, add them as code comments.\n" +
-      "Within this method, you will execute the following steps:\n" +
-      "1. Load data from the JSONL files. A JSONL file contains data retrieved from " +
-      "using qb_user_data_retriever tool call. Each JSONL file should be loaded into " +
-      "a pandas dataframe. For every JSONL file, do the following:\n" +
-      "1.1 Start with an empty pandas dataframe.\n" +
-      "1.2 Load each JSON line, which is a QueryResponse object from Quickbooks.\n" +
-      "1.3 Extract the relevant rows and columns, validate values or use default values if missing.\n" +
-      "1.4 Add the extracted data to a pandas dataframe.\n" +
-      "2. Analyze the data to answer the user's question.\n" +
-      "3. Run business logic invariants. Example: Gross margin = Sales price - Cost price.\n" +
-      "4. Prepare the result dataframe for the user by extracting the relevant columns.\n" +
-      "5. Return the result dataframe.\n" +
-      "You have access to numpy(version 2.3.2) and pandas(version 2.3.1) " +
-      "for analysis. The python environment doesn't have access to the internet.\n" +
-      "While loading data and parsing, do data validation checks. Look for missing data " +
-      "such as None, null and sentinel values. Highlight failures to user and suggest " +
-      "recommendations to fix them.\n" +
-      "If your code fails with syntax or runtime errors, fix it and retry the " +
-      "tool call.\n" +
-      "Example of analyze() function:\n" +
-      "```python\n" +
-      "def analyze():\n" +
-      "    # Setup imports\n" +
-      "    # Load from jsonl files\n" +
-      "    # Extract relevant rows and columns, validate values or use default values if missing\n" +
-      "    # Convert to pandas dataframe\n" +
-      "    # Analyze data, filter, aggregate, etc.\n" +
-      "    # Run business logic invariants\n" +
-      "    # Prepare result dataframe for the user by extracting the relevant columns\n" +
-      "    # Return result dataframe\n" +
-      "```\n\n" +
-      
+      this.get_python_analysis_prompt() +
 
       "#Guidance on Phase: Summarize analysis and respond to user\n" +
       "Your responses should be a valid JSON object. Don't insert extra text " +
@@ -241,5 +205,55 @@ export class QBServerPrompt implements IModelPrompt {
 
   pretty_print_conversation(): void {
     // Implementation will be in subclasses
+  }
+
+  get_typescript_analysis_prompt(): string {
+    return (
+      "You are a Quickbooks assistant that helps the user with understanding " +
+      "their Quickbooks data. You are very knowledgeable about Quickbooks platform " +
+      "and their capabilities. When the user comes to you with a request, you will follow " +
+      "the following steps to help the user:\n" +
+    )
+  }
+  get_python_analysis_prompt(): string {
+    return 
+    "# Guidance on Phase: Analysis\n" +
+    "You will enter this phase only after you have retrieved user's data " +
+    "from Quickbooks. You will use the data to run a python function for analysis. " +
+    "Your method name should always be 'analyze' and it should only " +
+    "return a pandas dataframe. If you make any assumptions, add them as code comments.\n" +
+    "Within this method, you will execute the following steps:\n" +
+    "1. Load data from the JSONL files. A JSONL file contains data retrieved from " +
+    "using qb_user_data_retriever tool call. Each JSONL file should be loaded into " +
+    "a pandas dataframe. For every JSONL file, do the following:\n" +
+    "1.1 Start with an empty pandas dataframe.\n" +
+    "1.2 Load each JSON line, which is a QueryResponse object from Quickbooks.\n" +
+    "1.3 Extract the relevant rows and columns, validate values or use default values if missing.\n" +
+    "1.4 Add the extracted data to a pandas dataframe.\n" +
+    "2. Analyze the data to answer the user's question.\n" +
+    "3. Run business logic invariants. Example: Gross margin = Sales price - Cost price.\n" +
+    "4. Prepare the result dataframe for the user by extracting the relevant columns.\n" +
+    "5. Return the result dataframe.\n" +
+    "You have access to numpy(version 2.3.2) and pandas(version 2.3.1) " +
+    "for analysis. The python environment doesn't have access to the internet.\n" +
+    "While loading data and parsing, do data validation checks. Look for missing data " +
+    "such as None, null and sentinel values. Highlight failures to user and suggest " +
+    "recommendations to fix them.\n" +
+    "If your code fails with syntax or runtime errors, fix it and retry the " +
+    "tool call.\n" +
+    "Example of analyze() function:\n" +
+    "```python\n" +
+    "def analyze():\n" +
+    "    # Setup imports\n" +
+    "    # Load from jsonl files\n" +
+    "    # Extract relevant rows and columns, validate values or use default values if missing\n" +
+    "    # Convert to pandas dataframe\n" +
+    "    # Analyze data, filter, aggregate, etc.\n" +
+    "    # Run business logic invariants\n" +
+    "    # Prepare result dataframe for the user by extracting the relevant columns\n" +
+    "    # Return result dataframe\n" +
+    "```\n\n" +
+
+    
   }
 } 

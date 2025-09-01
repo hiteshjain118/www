@@ -31,6 +31,10 @@ const config = {
   // Database Configuration
   databaseUrl: process.env.DATABASE_URL || '',
   
+  // Supabase Configuration
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  
   // Intent Server Configuration
   intentServerEnabled: process.env.INTENT_SERVER_ENABLED === 'true' || true,
   defaultIntent: process.env.DEFAULT_INTENT || 'qb',

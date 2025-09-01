@@ -1,9 +1,11 @@
 import { 
   ToolCallResult,
+  QueryType,
 } from 'coralbricks-common';
 import { ChatCompletionMessageCustomToolCall, ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 import axios from 'axios';
 import { PrismaService, Task } from 'coralbricks-common';
+import { TCWrapperExecutor, TypeScriptExecutor } from './tcWrapperExecutor';
 
 export class ToolCallRunner {
   private threadId: bigint;
@@ -22,7 +24,9 @@ export class ToolCallRunner {
       };
     };
   }>;
-  private retrieval_tasks_scheduled: bigint[] = [];
+  private retrievalTasksScheduled: bigint[] = [];
+  private tcWrapperExecutor: TCWrapperExecutor | null = null;
+
   constructor(thread_id: bigint, cb_profile_id: bigint) {
     this.threadId = thread_id;
     this.cbProfileId = cb_profile_id;
@@ -76,13 +80,14 @@ export class ToolCallRunner {
       console.log(`Running tool call id:${tool_call_id} name:${tool_name} with arguments ${JSON.stringify(tool_arguments)}`);
       
       
-      if (tool_name === 'python_function_runner') {
-        result = await this.run_python_code_runner(tool_arguments_json);
+      if (tool_name === 'typescript_executor') {
+        result = await this.run_typescript_executor(tool_arguments_json);
       } else if (['qb_data_schema_retriever', 'qb_data_size_retriever'].includes(tool_name)) {
         result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "retrieve");
       } else if(tool_name === 'qb_user_data_retriever') {
         result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "schedule");
-        this.retrieval_tasks_scheduled.push(result.scheduled_task_id as bigint);
+        this.retrievalTasksScheduled.push(result.scheduled_task_id as bigint);
+        this.tcWrapperExecutor = null;
       } else {
         result = ToolCallResult.error(
           tool_name,
@@ -156,31 +161,21 @@ export class ToolCallRunner {
     }
   }
 
-  private async run_python_code_runner(args: Record<string, any>): Promise<ToolCallResult> {
-    const code = args.code;
-    if (code === undefined) {
-      return ToolCallResult.error(
-        args.name,
-        args.id,
-        this.threadId,
-        "InvalidParameters", 
-        "Code is required"
+  private async run_typescript_executor(args: Record<string, any>): Promise<ToolCallResult> {
+    if (this.tcWrapperExecutor === null) {
+      this.tcWrapperExecutor = new TCWrapperExecutor(
+        this.threadId, 
+        args.id, 
+        args.name, 
+        args, 
+        QueryType.RETRIEVE, 
+        0, 
+        this.retrievalTasksScheduled
       );
     }
-    
-    // For now, return a mock success result
-    // In a real implementation, you would execute Python code here
-    return ToolCallResult.success(
-      args.name,
-      {
-        message: 'Python code execution not implemented in TypeScript version',
-        code: code
-      },
-      args.id,
-      this.threadId
-    );
+  
+    return await this.tcWrapperExecutor.wrap();
   }
-
 
   async get_enabled_tools(): Promise<string[]> {
     if (this.enabledTools.length > 0) {
@@ -219,27 +214,8 @@ export class ToolCallRunner {
       // Backend now returns proper OpenAI tool format
       const backendTools = response.data.tools;
       
-      // Add python_function_runner manually since backend doesn't implement it yet
-      const pythonTool = {
-        type: "function" as const,
-        function: {
-          name: "python_function_runner",
-          description: "Executes Python code for data analysis",
-          parameters: {
-            type: "object",
-            properties: {
-              code: {
-                type: "string",
-                description: "Python code to execute"
-              }
-            },
-            required: ["code"]
-          }
-        }
-      };
-
       // Cache the tool descriptions
-      this.enabledToolDescriptions = [...backendTools, pythonTool];
+      this.enabledToolDescriptions = [...backendTools, TypeScriptExecutor.tool_description()];
       return this.enabledToolDescriptions;
     }
 

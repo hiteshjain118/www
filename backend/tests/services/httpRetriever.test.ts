@@ -2,12 +2,21 @@ import { AxiosResponse } from 'axios';
 import axios from 'axios';
 import { HTTPRetriever } from '../../src/services/httpRetriever';
 import { IRemoteHTTPConnection } from '../../src/types';
-import { SupabaseStorageService } from '../../src/services/supabaseStorage';
+import { SupabaseStorageService } from 'coralbricks-common';
 import { log } from '../../src/utils/logger';
 
 // Mock dependencies
 jest.mock('axios');
-jest.mock('../../src/services/supabaseStorage');
+jest.mock('coralbricks-common', () => ({
+  SupabaseStorageService: jest.fn().mockImplementation(() => ({
+    tryCache: jest.fn(),
+    cache: jest.fn(),
+    clearCache: jest.fn(),
+    listCachedFiles: jest.fn(),
+    clearAllCache: jest.fn(),
+    getCacheStats: jest.fn()
+  }))
+}));
 jest.mock('../../src/utils/logger', () => ({
   log: {
     error: jest.fn(),

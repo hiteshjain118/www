@@ -15,6 +15,7 @@ export interface Task {
   toolCallArgs: any;
   handleForModel: string;
   status: string;
+  blobPath: string;
 }
 
 export interface TaskWithDependencies extends Task {
@@ -41,6 +42,7 @@ export class TaskService {
     toolCallName: string;
     toolCallArgs: any;
     handleForModel: string;
+    blobPath: string;
   }): Promise<Task> {
     const prisma = PrismaService.getInstance();
     
@@ -53,6 +55,7 @@ export class TaskService {
           toolCallArgs: data.toolCallArgs,
           handleForModel: data.handleForModel,
           status: TaskStatus.CREATED,
+          blobPath: data.blobPath,
         },
       });
     } catch (error) {

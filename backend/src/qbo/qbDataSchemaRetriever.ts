@@ -61,6 +61,10 @@ export class QBDataSchemaRetriever extends HTTPRetriever implements IToolCall {
     return `qb_data_schema_retriever_${this.qbo_profile.cbId}_${this.table_name}`;
   }
 
+  getBlobPath(): string {
+    return this._cache_key();
+  }
+  
   api_summary(): string {
     return "Makes HTTP calls to retrieve data schema from Quickbooks";
   }

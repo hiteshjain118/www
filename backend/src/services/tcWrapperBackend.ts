@@ -20,20 +20,20 @@ export { QueryType };
 
 class TCWrapperBackend extends ToolCallWrapper {
   constructor(
-    threadId: bigint,
-    toolCallId: string,
+    thread_id: bigint,
+    tool_call_id: string,
     tool_name: string,
-    toolArgs: any,
+    tool_args: any,
     protected qboProfile: QBProfile,
-    query_type: QueryType,
+    query_type_enum: QueryType,
     scheduled_delay_ms: number = 1,
     depends_on_task_ids: bigint[] = []
   ) {
-    super(threadId, toolCallId, tool_name, toolArgs, query_type, scheduled_delay_ms, depends_on_task_ids);
+    super(thread_id, tool_call_id, tool_name, tool_args, query_type_enum, scheduled_delay_ms, depends_on_task_ids);
   }
 
   public get_tool_instance(): IToolCall {
-    switch (this.tool_name) {
+    switch (this.toolName) {
       case 'qb_data_size_retriever':
         if (!this.toolArgs.query) {
           throw new Error('Missing required parameter for qb_data_size_retriever: query');

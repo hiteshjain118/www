@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 import axios, { AxiosResponse } from 'axios';
-import { IRemoteHTTPConnection, IRetriever } from '../types';
+import { IRetriever, IRemoteHTTPConnection } from '../types';
 import { log } from '../utils/logger';
-import { SupabaseStorageService } from './supabaseStorage';
+import { SupabaseStorageService } from 'coralbricks-common';
 
 export abstract class HTTPRetriever implements IRetriever {
   protected connection: IRemoteHTTPConnection;

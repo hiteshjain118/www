@@ -12,11 +12,11 @@ export abstract class ToolCallWrapper {
   constructor(
     protected threadId: bigint, 
     protected toolCallId: string, 
-    protected tool_name: string,
+    protected toolName: string,
     protected toolArgs: any,
-    protected query_type: QueryType,
-    protected scheduled_delay_ms: number = 1,
-    protected depends_on_task_ids: bigint[] = []
+    protected queryType: QueryType,
+    protected scheduledDelayMs: number = 1,
+    protected dependsOnTaskIds: bigint[] = []
   ) {}
 
   async run(res: any): Promise<void> {
@@ -30,19 +30,20 @@ export abstract class ToolCallWrapper {
     try {
       const tool_instance = this.get_tool_instance();
       
-      if (this.query_type === QueryType.VALIDATE) {
+      if (this.queryType === QueryType.VALIDATE) {
         await tool_instance.validate();
-        tool_call_result = ToolCallResult.success(this.tool_name, {}, this.toolCallId, this.threadId);
-      } else if (this.query_type === QueryType.SCHEDULE) {
+        tool_call_result = ToolCallResult.success(this.toolName, {}, this.toolCallId, this.threadId);
+      } else if (this.queryType === QueryType.SCHEDULE) {
         await tool_instance.validate();
         const task = await TaskService.getInstance().createTask({
           threadId: this.threadId,
           toolCallId: this.toolCallId,
-          toolCallName: this.tool_name,
+          toolCallName: this.toolName,
           toolCallArgs: this.toolArgs,
-          handleForModel: this.toolCallId + '_' + this.tool_name,
+          handleForModel: this.toolCallId + '_' + this.toolName,
+          blobPath: tool_instance.getBlobPath(),
         });
-        tool_call_result = ToolCallResult.scheduled(this.tool_name, this.toolCallId, this.threadId, task.handleForModel, task.cbId);
+        tool_call_result = ToolCallResult.scheduled(this.toolName, this.toolCallId, this.threadId, task.handleForModel, task.cbId);
         // schedule to run tool in background 
         setTimeout(async () => {
           try {
@@ -50,10 +51,10 @@ export abstract class ToolCallWrapper {
             await TaskService.getInstance().updateTaskStatus(task.cbId, TaskStatus.COMPLETED);
           } catch (error) {
             await TaskService.getInstance().updateTaskStatus(task.cbId, TaskStatus.FAILED);
-            console.error(`Error executing tool ${this.tool_name} in task ${task.cbId}, threadId: ${this.threadId}, toolCallId: ${this.toolCallId}, error: ${error}`);
+            console.error(`Error executing tool ${this.toolName} in task ${task.cbId}, threadId: ${this.threadId}, toolCallId: ${this.toolCallId}, error: ${error}`);
           }
-        }, this.scheduled_delay_ms);
-      } else if (this.query_type === QueryType.RETRIEVE) {
+        }, this.scheduledDelayMs);
+      } else if (this.queryType === QueryType.RETRIEVE) {
         tool_call_result = await tool_instance.call_tool();
       } else {
         throw new Error("Invalid query type");
@@ -62,24 +63,24 @@ export abstract class ToolCallWrapper {
       if (error && typeof error === 'object' && 'constructor' in error && error.constructor.name === 'AxiosError') {
         const axiosError = error as any;
         tool_call_result = ToolCallResult.error(
-          this.tool_name,
+          this.toolName,
           this.toolCallId,
           this.threadId,
           axiosError.constructor.name,
           axiosError.message,
           axiosError.response?.status
         );
-        console.error(`HTTP error while executing tool ${this.tool_name}: ${tool_call_result.toLogMessage()}`);
+        console.error(`HTTP error while executing tool ${this.toolName}: ${tool_call_result.toLogMessage()}`);
         console.debug(`Detailed error info: ${tool_call_result.toLoggableString()}`);
       } else {
         tool_call_result = ToolCallResult.error(
-          this.tool_name,
+          this.toolName,
           this.toolCallId,
           this.threadId,
           error instanceof Error ? error.constructor.name : 'UnknownError',
           error instanceof Error ? error.message : 'Unknown error'
         );
-        console.error(`Error executing tool ${this.tool_name}: ${tool_call_result.toLogMessage()}`);
+        console.error(`Error executing tool ${this.toolName}: ${tool_call_result.toLogMessage()}`);
         console.debug(`Detailed error info: ${tool_call_result.toLoggableString()}`);
       }
     }

@@ -51,6 +51,10 @@ export class QBDataSizeRetriever extends HTTPRetriever implements IToolCall {
     };
   }
 
+  getBlobPath(): string {
+    return this._cache_key();
+  }
+
   protected _to_json(response: AxiosResponse): [Record<string, any>, number] {
     const response_json = response.data;
     const queryResponseKey = this.extract_query_response_key();
