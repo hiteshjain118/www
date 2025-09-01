@@ -22,7 +22,7 @@ export class ToolCallRunner {
       };
     };
   }>;
-  private tasks: Task[] = [];
+  private retrieval_tasks_scheduled: bigint[] = [];
   constructor(thread_id: bigint, cb_profile_id: bigint) {
     this.threadId = thread_id;
     this.cbProfileId = cb_profile_id;
@@ -68,7 +68,6 @@ export class ToolCallRunner {
     tool_call_id: string, 
     tool_name: string, 
     tool_arguments: string,
-    requestModelEventId: bigint | null
   ): Promise<ToolCallResult> {
     let result: ToolCallResult;
    
@@ -83,6 +82,7 @@ export class ToolCallRunner {
         result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "retrieve");
       } else if(tool_name === 'qb_user_data_retriever') {
         result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "schedule");
+        this.retrieval_tasks_scheduled.push(result.scheduled_task_id as bigint);
       } else {
         result = ToolCallResult.error(
           tool_name,
