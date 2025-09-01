@@ -58,7 +58,6 @@ internalApp.use((req, res, next) => {
     logData.body = req.body;
   }
 
-  log.info(`[INTERNAL] ${req.method} ${req.path}`, logData);
   next();
 });
 

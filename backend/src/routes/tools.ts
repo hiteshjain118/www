@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { enhancedLogger as log } from '../utils/logger';
 import { CBUser, QBProfile } from '../types/profiles';
-import { ToolCallWrapper } from '../services/toolCallWrapper';
+import { ToolCallWrapper, QueryType } from '../services/toolCallWrapper';
 import { TOOL_REGISTRY } from '../services/toolCallWrapper';
 
 const router = Router();
@@ -73,7 +73,7 @@ router.get('/tools', (req: Request, res: Response) => {
  */
 router.post('/:toolName', async (req: Request, res: Response) => {
   const { toolName } = req.params;
-  const { tool_call_id, thread_id, cbid, queryType, ...toolArgs } = req.body;
+  const { tool_call_id, thread_id, cbid, query_type, ...toolArgs } = req.body;
   const startTime = Date.now();
   const requestId = req.headers['x-request-id'] as string;
   
@@ -84,14 +84,14 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     tool_call_id,
     thread_id,
     cbid,
-    queryType,
+    query_type,
     toolArgs,
     body: req.body
   });
 
   try {
     // Validate required parameters
-    if (!cbid || !tool_call_id || !thread_id || !queryType) {
+    if (!cbid || !tool_call_id || !thread_id || !query_type) {
       return res.status(400).json({
         success: false,
         error: 'Missing required parameter: cbid, tool_call_id, thread_id, queryType'
@@ -99,7 +99,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     }
 
     // Validate queryType value
-    if (!['retrieve', 'validate', 'schedule'].includes(queryType)) {
+    if (!['retrieve', 'validate', 'schedule'].includes(query_type)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid queryType. Must be one of: retrieve, validate, schedule'
@@ -111,6 +111,22 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     const cb_owner = await CBUser.load_profile(viewerContext, BigInt(cbid));
     const qboProfile = await QBProfile.load_any_from_cb_owner(viewerContext, cb_owner);
 
+    // Convert queryType string to QueryType enum
+    let query_type_enum: QueryType;
+    switch (query_type) {
+      case 'retrieve':
+        query_type_enum = QueryType.RETRIEVE;
+        break;
+      case 'validate':
+        query_type_enum = QueryType.VALIDATE;
+        break;
+      case 'schedule':
+        query_type_enum = QueryType.SCHEDULE;
+        break;
+      default:
+        throw new Error(`Invalid queryType: ${query_type}`);
+    }
+
     // Create wrapper and execute/validate the tool
     const wrapper = new ToolCallWrapper(
       thread_id, 
@@ -118,7 +134,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
       toolName, 
       toolArgs, 
       qboProfile, 
-      queryType
+      query_type_enum
     );
     
     
@@ -135,7 +151,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const action = queryType === 'validate' ? 'validating' : 'executing';
+    const action = query_type === 'validate' ? 'validating' : 'executing';
     
     log.error(`[TOOL] Error ${action} tool ${toolName}`, {
       requestId,

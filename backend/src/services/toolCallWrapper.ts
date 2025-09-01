@@ -80,9 +80,9 @@ export class ToolCallWrapper {
           toolCallId: this.toolCallId,
           toolCallName: this.tool_name,
           toolCallArgs: this.toolArgs,
-          handleForModel: this.toolCallId + this.tool_name,
+          handleForModel: this.toolCallId + '_' + this.tool_name,
         });
-        tool_call_result = ToolCallResult.success(this.tool_name, {"handle_name": task.handleForModel}, this.toolCallId, this.threadId);
+        tool_call_result = ToolCallResult.scheduled(this.tool_name, this.toolCallId, this.threadId, task.handleForModel, task.cbId);
         // schedule to run tool in background 
         setTimeout(async () => {
           try {

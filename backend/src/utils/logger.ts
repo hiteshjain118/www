@@ -150,38 +150,6 @@ if (config.nodeEnv === 'development') {
   // No need to add another console transport
 }
 
-// Export a simple log function for convenience
-export const log = {
-  info: (message: string, meta?: any) => {
-    const callSite = getCallSite();
-    if (callSite) {
-      meta = { ...meta, file: callSite };
-    }
-    logger.info(message, meta);
-  },
-  error: (message: string, meta?: any) => {
-    const callSite = getCallSite();
-    if (callSite) {
-      meta = { ...meta, file: callSite };
-    }
-    logger.error(message, meta);
-  },
-  warn: (message: string, meta?: any) => {
-    const callSite = getCallSite();
-    if (callSite) {
-      meta = { ...meta, file: callSite };
-    }
-    logger.warn(message, meta);
-  },
-  debug: (message: string, meta?: any) => {
-    const callSite = getCallSite();
-    if (callSite) {
-      meta = { ...meta, file: callSite };
-    }
-    logger.debug(message, meta);
-  }
-};
-
 // Export the logger instance with enhanced methods for better line number detection
 export const enhancedLogger = {
   info: (message: string, meta?: any) => {
@@ -212,4 +180,7 @@ export const enhancedLogger = {
     }
     return logger.debug(message, meta);
   }
-}; 
+};
+
+// Export enhancedLogger as log for convenience and backward compatibility
+export const log = enhancedLogger; 
