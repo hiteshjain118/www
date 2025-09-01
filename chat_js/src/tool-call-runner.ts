@@ -80,9 +80,9 @@ export class ToolCallRunner {
       if (tool_name === 'python_function_runner') {
         result = await this.run_python_code_runner(tool_arguments_json);
       } else if (['qb_data_schema_retriever', 'qb_data_size_retriever'].includes(tool_name)) {
-        result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, false);
+        result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "retrieve");
       } else if(tool_name === 'qb_user_data_retriever') {
-        result = await this.validateThenRetrieve(tool_name, tool_call_id, tool_arguments_json, requestModelEventId);
+        result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "schedule");
       } else {
         result = ToolCallResult.error(
           tool_name,
@@ -111,31 +111,6 @@ export class ToolCallRunner {
     
     return result;
   }
-  
-  public async validateThenRetrieve(toolName: string, toolCallId: string, toolArguments: Record<string, any>, requestModelEventId: bigint | null): Promise<ToolCallResult> {
-    const result = await this.callInternalAPI(toolName, toolCallId, toolArguments, true);
-    if (result.status === "success") {
-      // create a task handle and create new ToolCallResult object to be returned 
-      // Schedule the retrieval task to run in the background
-      const prisma_client = PrismaService.getInstance()
-      const handleForModel = toolName + "_" + toolCallId;
-      const task = await prisma_client.task.create({
-        data: {
-          threadId: this.threadId,
-          toolCallId: toolCallId,
-          toolCallName: toolName,
-          toolCallArgs: toolArguments,
-          handleForModel: handleForModel,
-          requestModelEventId: requestModelEventId || undefined,
-          deps: this.tasks.length > 0 ? { connect: this.tasks.map(task => ({ cbId: task.cbId })) } : undefined
-        }
-      })
-      console.log(`Created task ${task.cbId} for tool call ${toolCallId}`);
-      this.tasks.push(task);
-      return await this.callInternalAPI(toolName, toolCallId, toolArguments, false);
-    }
-    return result;
-  }
 
   /**
    * Call the internal backend API for QB tools
@@ -144,14 +119,14 @@ export class ToolCallRunner {
     toolName: string, 
     toolCallId: string, 
     toolArguments: Record<string, any>,
-    validate: boolean = false
+    query_type: "retrieve" | "schedule" = "retrieve"
   ): Promise<ToolCallResult> {
     try {
       const requestBody = {
         cbid: this.cbProfileId.toString(),
         thread_id: this.threadId.toString(),
         tool_call_id: toolCallId,
-        validate: validate,
+        query_type: query_type,
         ...toolArguments
       };
 
@@ -168,7 +143,7 @@ export class ToolCallRunner {
         timeout: 30000 // 30 second timeout
       });
 
-      return ToolCallResult.from_dict(response.data);
+      return ToolCallResult.from_api_response(response.data);
 
     } catch (error) {
       return ToolCallResult.error(

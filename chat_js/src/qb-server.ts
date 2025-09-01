@@ -106,7 +106,8 @@ export class QBServer extends IIntentServer {
       const model_event = await prisma_client.modelEvent.create({
         data: {
           systemPrompt: input.modelIO.prompt.get_system_prompt(),
-          toolCalls: output.tool_call_results ? Object.values(output.tool_call_results).map(tcr => tcr.to_json()) : "",
+          toolCalls: output.tool_call_results ? 
+            Object.values(output.tool_call_results).map(tcr => tcr.as_cc_tc_response_json()) : "",
           responseContent: output.response_content,
           inputPrompt: input.modelIO.prompt.get_json_conversation_after_system_prompt(),
           threadId: input.threadId,

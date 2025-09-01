@@ -894,7 +894,7 @@ describe('ToolCallRunner', () => {
         .mockResolvedValueOnce(mockValidationResponse) // First call for validation
         .mockResolvedValueOnce(mockExecutionResponse); // Second call for execution
 
-      const result = await toolCallRunner.validateThenRetrieve(
+      const result = await toolCallRunner.schedule(
         'qb_user_data_retriever',
         'test_call_123',
         { userId: 123, query: 'SELECT * FROM users' },
@@ -952,7 +952,7 @@ describe('ToolCallRunner', () => {
 
       mockedAxios.post.mockResolvedValue(mockValidationResponse);
 
-      const result = await toolCallRunner.validateThenRetrieve(
+      const result = await toolCallRunner.schedule(
         'qb_user_data_retriever',
         'test_call_123',
         { userId: 123, query: 'SELECT * FROM users' },
@@ -1020,7 +1020,7 @@ describe('ToolCallRunner', () => {
       // Mock the tasks array to simulate existing tasks
       (toolCallRunner as any).tasks = [existingTask];
 
-      const result = await toolCallRunner.validateThenRetrieve(
+      const result = await toolCallRunner.schedule(
         'qb_user_data_retriever',
         'test_call_123',
         { userId: 123, query: 'SELECT * FROM users' },
@@ -1064,7 +1064,7 @@ describe('ToolCallRunner', () => {
       // Ensure no existing tasks
       (toolCallRunner as any).tasks = [];
 
-      const result = await toolCallRunner.validateThenRetrieve(
+      const result = await toolCallRunner.schedule(
         'qb_user_data_retriever',
         'test_call_123',
         { userId: 123, query: 'SELECT * FROM users' },

@@ -1,0 +1,7 @@
+jest.mock("../../src/utils/logger", () => ({
+  enhancedLogger: {
+    error: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn()
+  }
+}));

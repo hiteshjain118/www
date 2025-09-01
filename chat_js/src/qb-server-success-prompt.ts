@@ -63,7 +63,7 @@ export class QBServerSuccessPrompt extends QBServerPrompt {
   add_tool_output(toolCallId: string, toolOutput: ToolCallResult): void {
     this.messages.push({
       role: 'tool',
-      content: toolOutput.to_json(),
+      content: toolOutput.as_cc_tc_response_json(),
       tool_call_id: toolCallId,
       name: toolOutput.tool_name
     });

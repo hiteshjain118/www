@@ -118,6 +118,7 @@ describe('ToolCallResult', () => {
         expect(result.error_type).toBe(errorType);
         expect(result.error_message).toBe(errorMessage);
         expect(result.status_code).toBe(statusCode);
+        expect(result.content).toBeUndefined();
       });
 
       it('should create error without status code', () => {
@@ -136,28 +137,28 @@ describe('ToolCallResult', () => {
 
     describe('scheduled', () => {
       it('should create a scheduled ToolCallResult', () => {
-        const jobParams = {
-          job_id: BigInt(987654321),
-          handle: 'scheduled-job-handle'
-        };
+        const modelHandleName = 'scheduled-job-handle';
+        const scheduledTaskId = BigInt(987654321);
 
         const result = ToolCallResult.scheduled(
           mockToolName,
           mockToolCallId,
           mockThreadId,
-          jobParams
+          modelHandleName,
+          scheduledTaskId
         );
 
-        expect(result.status).toBe('success');
+        expect(result.status).toBe('scheduled');
         expect(result.tool_name).toBe(mockToolName);
-        expect(result.content).toEqual(jobParams);
+        expect(result.model_handle_name).toBe(modelHandleName);
+        expect(result.scheduled_task_id).toBe(scheduledTaskId);
         expect(result.tool_call_id).toBe(mockToolCallId);
         expect(result.thread_id).toBe(mockThreadId);
       });
     });
   });
 
-  describe('to_dict', () => {
+  describe('as_api_response', () => {
     it('should return correct dictionary for success result', () => {
       const content = { data: 'test data', count: 42 };
       const result = new ToolCallResult(
@@ -168,7 +169,7 @@ describe('ToolCallResult', () => {
         content
       );
 
-      const dict = result.to_dict();
+      const dict = result.as_api_response();
 
       expect(dict).toEqual({
         status: 'success',
@@ -191,23 +192,22 @@ describe('ToolCallResult', () => {
         400
       );
 
-      const dict = result.to_dict();
+      const dict = result.as_api_response();
 
       expect(dict).toEqual({
         status: 'error',
         tool_name: mockToolName,
         tool_call_id: mockToolCallId,
         thread_id: mockThreadId,
-        content: {
-          error_type: 'ValidationError',
-          error_message: 'Invalid input',
-          status_code: 400
-        }
+        content: undefined,
+        error_type: 'ValidationError',
+        error_message: 'Invalid input',
+        status_code: 400
       });
     });
   });
 
-  describe('to_dict_w_truncated_content', () => {
+  describe('to_dict_w_truncated_content_for_logging', () => {
     it('should truncate long content for success result', () => {
       const longContent = 'A'.repeat(150);
       const result = new ToolCallResult(
@@ -218,7 +218,7 @@ describe('ToolCallResult', () => {
         longContent
       );
 
-      const dict = result.to_dict_w_truncated_content();
+      const dict = result.to_dict_w_truncated_content_for_logging();
 
       expect(dict.content).toBe('A'.repeat(100) + '...');
     });
@@ -233,7 +233,7 @@ describe('ToolCallResult', () => {
         shortContent
       );
 
-      const dict = result.to_dict_w_truncated_content();
+      const dict = result.to_dict_w_truncated_content_for_logging();
 
       expect(dict.content).toBe(shortContent);
     });
@@ -247,7 +247,7 @@ describe('ToolCallResult', () => {
         null
       );
 
-      const dict = result.to_dict_w_truncated_content();
+      const dict = result.to_dict_w_truncated_content_for_logging();
 
       expect(dict.content).toBeUndefined();
     });
@@ -261,15 +261,15 @@ describe('ToolCallResult', () => {
         undefined
       );
 
-      const dict = result.to_dict_w_truncated_content();
+      const dict = result.to_dict_w_truncated_content_for_logging();
 
       expect(dict.content).toBeUndefined();
     });
   });
 
-  describe('to_json', () => {
+  describe('as_api_response_json', () => {
     it('should serialize success result to JSON', () => {
-      const content = { result: 'success', data: [1, 2, 3] };
+      const content = { data: [1, 2, 3] };
       const result = new ToolCallResult(
         'success',
         mockToolName,
@@ -278,14 +278,14 @@ describe('ToolCallResult', () => {
         content
       );
 
-      const json = result.to_json();
+      const json = result.as_api_response_json();
       const parsed = JSON.parse(json);
 
       expect(parsed.status).toBe('success');
       expect(parsed.tool_name).toBe(mockToolName);
       expect(parsed.tool_call_id).toBe(mockToolCallId);
       expect(parsed.thread_id).toBe(mockThreadId.toString()); // BigInt should be converted to string
-      expect(parsed.content).toEqual(content);
+      expect(parsed.content).toEqual({data: [1, 2, 3]});
     });
 
     it('should serialize error result to JSON', () => {
@@ -300,16 +300,16 @@ describe('ToolCallResult', () => {
         500
       );
 
-      const json = result.to_json();
+      const json = result.as_api_response_json();
       const parsed = JSON.parse(json);
 
       expect(parsed.status).toBe('error');
       expect(parsed.tool_name).toBe(mockToolName);
       expect(parsed.tool_call_id).toBe(mockToolCallId);
       expect(parsed.thread_id).toBe(mockThreadId.toString());
-      expect(parsed.content.error_type).toBe('NetworkError');
-      expect(parsed.content.error_message).toBe('Connection failed');
-      expect(parsed.content.status_code).toBe(500);
+      expect(parsed.error_type).toBe('NetworkError');
+      expect(parsed.error_message).toBe('Connection failed');
+      expect(parsed.status_code).toBe(500);
     });
 
     it('should handle BigInt values in content', () => {
@@ -329,7 +329,7 @@ describe('ToolCallResult', () => {
         contentWithBigInt
       );
 
-      const json = result.to_json();
+      const json = result.as_api_response_json();
       const parsed = JSON.parse(json);
 
       expect(parsed.thread_id).toBe(mockThreadId.toString());
@@ -436,7 +436,7 @@ describe('ToolCallResult', () => {
     });
   });
 
-  describe('from_dict', () => {
+  describe('from_api_response', () => {
     it('should create success ToolCallResult from dictionary', () => {
       const dict = {
         status: 'success',
@@ -446,7 +446,7 @@ describe('ToolCallResult', () => {
         content: { data: 'test' }
       };
 
-      const result = ToolCallResult.from_dict(dict);
+      const result = ToolCallResult.from_api_response(dict);
 
       expect(result.status).toBe('success');
       expect(result.tool_name).toBe(mockToolName);
@@ -461,14 +461,13 @@ describe('ToolCallResult', () => {
         tool_name: mockToolName,
         tool_call_id: mockToolCallId,
         thread_id: mockThreadId,
-        content: {
-          error_type: 'ValidationError',
-          error_message: 'Invalid input',
-          status_code: 400
-        }
+        content: undefined,
+        error_type: 'ValidationError',
+        error_message: 'Invalid input',
+        status_code: 400
       };
 
-      const result = ToolCallResult.from_dict(dict);
+      const result = ToolCallResult.from_api_response(dict);
 
       expect(result.status).toBe('error');
       expect(result.tool_name).toBe(mockToolName);
@@ -491,7 +490,7 @@ describe('ToolCallResult', () => {
       );
 
       expect(result.content).toBe('');
-      expect(result.to_dict().content).toBe('');
+      expect(result.as_api_response().content).toBe('');
     });
 
     it('should handle zero BigInt thread_id', () => {
@@ -505,7 +504,7 @@ describe('ToolCallResult', () => {
       );
 
       expect(result.thread_id).toBe(zeroThreadId);
-      expect(result.to_json()).toContain('"thread_id":"0"');
+      expect(result.as_api_response_json()).toContain('"thread_id":"0"');
     });
 
     it('should handle very large BigInt thread_id', () => {
@@ -519,7 +518,7 @@ describe('ToolCallResult', () => {
       );
 
       expect(result.thread_id).toBe(largeThreadId);
-      expect(result.to_json()).toContain('"thread_id":"9223372036854775807"');
+      expect(result.as_api_response_json()).toContain('"thread_id":"9223372036854775807"');
     });
 
     it('should handle complex nested objects with BigInt', () => {
@@ -545,7 +544,7 @@ describe('ToolCallResult', () => {
         complexContent
       );
 
-      const json = result.to_json();
+      const json = result.as_api_response_json();
       const parsed = JSON.parse(json);
 
       expect(parsed.content.users[0].id).toBe('1');
@@ -554,6 +553,326 @@ describe('ToolCallResult', () => {
       expect(parsed.content.metadata.nested.count).toBe('50');
     });
   });
+
+  describe('as_cc_tc_response', () => {
+    it('should return correct response for success result', () => {
+      const content = { data: 'test data', count: 42, nested: { value: 'test' } };
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        content
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        data: 'test data',
+        count: 42,
+        nested: { value: 'test' },
+        status: 'success'
+      });
+    });
+
+    it('should return correct response for error result', () => {
+      const result = new ToolCallResult(
+        'error',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        undefined,
+        'ValidationError',
+        'Invalid input',
+        400
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        status: 'error',
+        error_type: 'ValidationError',
+        error_message: 'Invalid input',
+        status_code: 400
+      });
+    });
+
+    it('should handle null content in success result', () => {
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        null
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        
+        status: 'success'
+      });
+    });
+
+    it('should handle undefined content in success result', () => {
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        undefined
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        status: 'success'
+      });
+    });
+
+    it('should handle empty object content', () => {
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        {}
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        status: 'success'
+      });
+    });
+
+    it('should handle array content', () => {
+      const content = [1, 2, 3, { nested: 'value' }];
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        content
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        0: 1,
+        1: 2,
+        2: 3,
+        3: { nested: 'value' },
+        status: 'success'
+      });
+    });
+
+    it('should handle error without status code', () => {
+      const result = new ToolCallResult(
+        'error',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        undefined,
+        'NetworkError',
+        'Connection failed'
+      );
+
+      const response = result.as_cc_tc_response();
+
+      expect(response).toEqual({
+        status: 'error',
+        error_type: 'NetworkError',
+        error_message: 'Connection failed',
+        status_code: undefined
+      });
+    });
+  });
+
+  describe('as_cc_tc_response_json', () => {
+    it('should serialize success result to JSON', () => {
+      const content = { data: [1, 2, 3], message: 'Success' };
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        content
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual({
+        data: [1, 2, 3],
+        message: 'Success',
+        status: 'success'
+      });
+    });
+    
+    it('should serialize scheduled result to JSON', () => {
+      const modelHandleName = 'scheduled-job-handle';
+      const scheduledTaskId = BigInt(987654321);
+      const result = ToolCallResult.scheduled(
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        modelHandleName,
+        scheduledTaskId
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual({
+        status: 'scheduled',
+        handle: modelHandleName,
+      });
+      expect(result.scheduled_task_id).toBe(scheduledTaskId);
+      expect(result.model_handle_name).toBe(modelHandleName);
+    });
+
+    it('should serialize error result to JSON', () => {
+      const result = new ToolCallResult(
+        'error',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        undefined,
+        'ValidationError',
+        'Invalid input',
+        400
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual({
+        status: 'error',
+        error_type: 'ValidationError',
+        error_message: 'Invalid input',
+        status_code: 400
+      });
+    });
+
+    it('should handle BigInt values in content', () => {
+      const contentWithBigInt = {
+        id: BigInt(123456789),
+        count: 42,
+        nested: {
+          bigValue: BigInt(987654321)
+        }
+      };
+
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        contentWithBigInt
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed.id).toBe('123456789');
+      expect(parsed.count).toBe(42);
+      expect(parsed.nested.bigValue).toBe('987654321');
+      expect(parsed.status).toBe('success');
+    });
+
+    it('should handle null content in JSON', () => {
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        null
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual({
+        
+        status: 'success'
+      });
+    });
+
+    it('should handle undefined content in JSON', () => {
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        undefined
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual({
+        status: 'success'
+      });
+    });
+
+    it('should handle complex nested objects with BigInt', () => {
+      const complexContent = {
+        users: [
+          { id: BigInt(1), name: 'Alice' },
+          { id: BigInt(2), name: 'Bob' }
+        ],
+        metadata: {
+          total: BigInt(100),
+          page: 1,
+          nested: {
+            count: BigInt(50)
+          }
+        }
+      };
+
+      const result = new ToolCallResult(
+        'success',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        complexContent
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed.users[0].id).toBe('1');
+      expect(parsed.users[1].id).toBe('2');
+      expect(parsed.metadata.total).toBe('100');
+      expect(parsed.metadata.nested.count).toBe('50');
+      expect(parsed.status).toBe('success');
+    });
+
+    it('should handle error with null status code', () => {
+      const result = new ToolCallResult(
+        'error',
+        mockToolName,
+        mockToolCallId,
+        mockThreadId,
+        undefined,
+        'ServerError',
+        'Internal server error',
+        null
+      );
+
+      const json = result.as_cc_tc_response_json();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toEqual({
+        status: 'error',
+        error_type: 'ServerError',
+        error_message: 'Internal server error',
+        status_code: null
+      });
+    });
+  });
+
 });
 
 describe('ToolDescription Interface', () => {

@@ -13,7 +13,7 @@ export interface IToolCallInput {
 // Tool call result factory
 export class ToolCallResult {
   constructor(
-    public status: 'success' | 'error',
+    public status: 'success' | 'error' | 'scheduled',
     public tool_name: string,
     public tool_call_id: string,
     public thread_id: bigint,
@@ -21,6 +21,8 @@ export class ToolCallResult {
     public error_type?: string,
     public error_message?: string,
     public status_code?: number | null,
+    public model_handle_name?: string | null,
+    public scheduled_task_id?: bigint | null,
   ) {}
 
   static error(
@@ -51,50 +53,88 @@ export class ToolCallResult {
     tool_name: string, 
     tool_call_id: string,
     thread_id: bigint,
-    job_params: {job_id: bigint, handle: string}
+    model_handle_name: string,
+    scheduled_task_id: bigint
   ): ToolCallResult {
-    return new ToolCallResult('success', tool_name, tool_call_id, thread_id, job_params);
+    return new ToolCallResult('scheduled', tool_name, tool_call_id, thread_id, undefined, undefined, undefined, undefined, model_handle_name, scheduled_task_id);
   }
 
-  to_dict_w_truncated_content(): Record<string, any> {
-    const dict_struct = this.to_dict();
-    if (this.status === 'success') {
-      dict_struct.content = this.content ? this.content.slice(0, 100) + (this.content.length > 100 ? '...' : '') : undefined;
-    } 
-    return dict_struct;
-  }
-
-  to_dict(): Record<string, any> {
-    const common = {
+  as_api_response(): Record<string, any> {
+    return {
       status: this.status,
       tool_name: this.tool_name,
       tool_call_id: this.tool_call_id,
-      thread_id: this.thread_id
+      thread_id: this.thread_id,
+      content: this.content,
+      error_type: this.error_type,
+      error_message: this.error_message,
+      status_code: this.status_code,
+      model_handle_name: this.model_handle_name,
+      scheduled_task_id: this.scheduled_task_id,
     };
-    if (this.status === 'success') {
-      return {
-        ...common,
-        content: this.content
-      };
-    } else {
-      return {
-        ...common,
-        content: {
-          error_type: this.error_type, 
-          error_message: this.error_message,
-          status_code: this.status_code
-        }
-      };
-    }
   }
 
-  to_json(): string {
-    return JSON.stringify(this.to_dict(), (key, value) => {
+  static from_api_response(api_response: Record<string, any>): ToolCallResult {
+    return new ToolCallResult(
+      api_response.status,
+      api_response.tool_name,
+      api_response.tool_call_id,
+      api_response.thread_id,
+      api_response.content,
+      api_response.error_type,
+      api_response.error_message,
+      api_response.status_code,
+      api_response.model_handle_name,
+      api_response.scheduled_task_id
+    );
+  }
+
+  as_api_response_json(): string {
+    return JSON.stringify(this.as_api_response(), (key, value) => {
       if (typeof value === 'bigint') {
         return value.toString();
       }
       return value;
     });
+  }
+  
+  as_cc_tc_response_json(): string {
+    return JSON.stringify(this.as_cc_tc_response(), (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    });
+  }
+
+  as_cc_tc_response(): Record<string, any> {
+    if (this.status === 'success') {
+      return {
+        ...this.content,
+        status: "success",
+      };
+    } else if (this.status === 'error') {
+      return {
+        status: "error",
+        error_type: this.error_type, 
+        error_message: this.error_message,
+        status_code: this.status_code
+      };
+    } else if (this.status === 'scheduled') {
+      return {
+        status: "scheduled",
+        handle: this.model_handle_name,
+      };
+    }
+    throw new Error("Invalid status");
+  }
+
+  to_dict_w_truncated_content_for_logging(): Record<string, any> {
+    const dict_struct = this.as_api_response();
+    if (this.status === 'success') {
+      dict_struct.content = this.content ? this.content.slice(0, 100) + (this.content.length > 100 ? '...' : '') : undefined;
+    } 
+    return dict_struct;
   }
 
   /**
@@ -133,26 +173,6 @@ export class ToolCallResult {
       return `${base} - Content: ${this.content ? 'Available' : 'None'}`;
     } else {
       return `${base} - Error: ${this.error_type} - ${this.error_message}`;
-    }
-  }
-
-  static from_dict(dict: Record<string, any>): ToolCallResult {
-    if (dict.status === 'success') {
-      return ToolCallResult.success(
-        dict.tool_name,
-        dict.content,
-        dict.tool_call_id,
-        dict.thread_id
-      );
-    } else {
-      return ToolCallResult.error(
-        dict.tool_name,
-        dict.tool_call_id,
-        dict.thread_id,
-        dict.content.error_type,
-        dict.content.error_message,
-        dict.content.status_code
-      );
     }
   }
 }

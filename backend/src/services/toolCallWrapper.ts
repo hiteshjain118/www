@@ -14,7 +14,7 @@ export const TOOL_REGISTRY = {
   'qb_user_data_retriever': QBUserDataRetriever.tool_description()
 } as const;
 
-enum QueryType {
+export enum QueryType {
   RETRIEVE = "retrieve",
   SCHEDULE = "schedule",
   VALIDATE = "validate"
@@ -41,7 +41,7 @@ export class ToolCallWrapper {
           this.threadId,
           "MissingRequiredParameter",
           "Missing required parameter: thread_id, tool_call_id, tool_name"
-        ).to_dict()
+        ).as_api_response()
       );
       return;
     }
@@ -55,14 +55,14 @@ export class ToolCallWrapper {
           this.threadId,
           "ToolNotFound",
           "Tool not found"
-        ).to_dict()
+        ).as_api_response()
       );
       return;
     }
 
     const tool_call_result = await this.wrap();
     const status = tool_call_result.status === 'success' ? 200 : 500;
-    res.status(status).json(tool_call_result.to_dict());
+    res.status(status).json(tool_call_result.as_api_response());
   }
 
   async wrap(): Promise<ToolCallResult> {
@@ -95,8 +95,9 @@ export class ToolCallWrapper {
         }, this.scheduled_delay_ms);
       } else if (this.query_type === QueryType.RETRIEVE) {
         tool_call_result = await tool_instance.call_tool();
+      } else {
+        throw new Error("Invalid query type");
       }
-      throw new Error('Invalid query type');
     } catch (error) {
       if (error instanceof AxiosError) {
         tool_call_result = ToolCallResult.error(
