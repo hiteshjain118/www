@@ -36,7 +36,7 @@ export interface UserProfile {
 export interface ThreadMessage {
   cbId: string;
   threadId: string;
-  senderId: string;
+  sender_id: string;
   receiverId: string;
   body: string;
   createdAt: string;

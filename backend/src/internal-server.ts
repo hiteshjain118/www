@@ -13,6 +13,7 @@ import { enhancedLogger as log } from './utils/logger';
 
 // Import internal routes
 import toolsRoutes from './routes/tools';
+import internToolsRoutes from './routes/internTools';
 
 // Create Express app for internal services
 const internalApp = express();
@@ -87,7 +88,8 @@ internalApp.get('/status', (req, res) => {
       '/status',
       '/',
       '/tools',
-      '/:toolName'
+      '/:toolName',
+      '/intern/message/model_events?messageId=123'
     ],
     security_note: 'This is an internal API - not exposed publicly'
   });
@@ -95,6 +97,9 @@ internalApp.get('/status', (req, res) => {
 
 // Register tool routes
 internalApp.use('/', toolsRoutes);
+
+// Register internal debugging tools
+internalApp.use('/intern', internToolsRoutes);
 
 // 404 handler
 internalApp.use('*', (req, res) => {

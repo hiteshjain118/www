@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { AuthMiddleware } from '../middleware/auth';
-import { ThreadService, PrismaService } from 'coralbricks-common';
+import { ThreadService, PrismaService, MessageService } from 'coralbricks-common';
 import { enhancedLogger as logger } from '../utils/logger';
 
 const router = Router();
@@ -64,7 +64,36 @@ router.get('/thread/:cbid', async (req: Request, res: Response): Promise<void> =
     // Use the cbid directly from the authenticated user
     const userCbid = BigInt(req.user.cbid);
 
-    const result = await ThreadService.getInstance().getThread(BigInt(cbid));
+    const messages = await MessageService.getInstance().getMessagesByThreadId(BigInt(cbid));
+    
+    // Get thread info
+    const thread = await ThreadService.getInstance().getThread(BigInt(cbid));
+    
+    if (!thread) {
+      res.status(404).json({ 
+        success: false, 
+        error: 'Thread not found' 
+      });
+      return;
+    }
+    
+    // Return in the expected format: Thread with messages array
+    const result = {
+      success: true,
+      data: {
+        cbId: thread.cbId.toString(),
+        ownerId: thread.ownerId.toString(),
+        createdAt: thread.createdAt.toISOString(),
+        messages: messages.map(msg => ({
+          cbId: msg.cbId.toString(),
+          threadId: msg.threadId.toString(),
+          sender_id: msg.senderId.toString(),
+          receiverId: msg.receiverId.toString(),
+          body: msg.body,
+          createdAt: msg.createdAt.toISOString()
+        }))
+      }
+    };
     
     res.json(result);
   } catch (error) {

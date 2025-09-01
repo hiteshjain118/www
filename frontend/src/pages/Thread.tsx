@@ -28,14 +28,20 @@ const Thread: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [currentThread, setCurrentThread] = useState<ThreadType | null>(null);
   const [wsConnectionStatus, setWsConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  
+
 
   // Load thread data when threadId changes
   useEffect(() => {
     if (threadId && user?.cbid) {
+      // Clear previous messages and show loading state
+      setMessages([]);
+      setIsThreadLoading(true);
       loadThread(threadId);
     } else if (user?.cbid) {
       // Initialize with welcome message if no specific thread
@@ -47,6 +53,8 @@ const Thread: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+
 
   // WebSocket connection management
   useEffect(() => {
@@ -74,21 +82,15 @@ const Thread: React.FC = () => {
           setWsConnectionStatus('disconnected');
         },
         onMessage: (wsMessage: WebSocketMessage) => {
-          console.log('Received WebSocket message:', wsMessage);
-          
           if (wsMessage.type === 'message_received') {
-            // Handle message acknowledgment - show gray checkbox
-            console.log('✅ Message acknowledged by server, messageId:', wsMessage.messageId);
+            // Handle message acknowledgment - show checkmark
             setMessages((prev: Message[]) => {
-              console.log('Current messages before update:', prev);
               const updated = prev.map((msg: Message) => {
                 if (msg.id === 'temp-user-message') {
-                  console.log('Updating temp message to acknowledged');
                   return { ...msg, acknowledged: true, id: wsMessage.messageId || msg.id };
                 }
                 return msg;
               });
-              console.log('Messages after acknowledgment update:', updated);
               return updated;
             });
           } else if (wsMessage.type === 'chat' && wsMessage.message) {
@@ -100,6 +102,9 @@ const Thread: React.FC = () => {
               threadId: threadId,
               acknowledged: true // AI response is always delivered
             };
+            
+            // Make the message object immutable
+            Object.freeze(aiMessage);
             setMessages((prev: Message[]) => [...prev, aiMessage]);
             setIsLoading(false);
           } else if (wsMessage.type === 'error') {
@@ -111,6 +116,9 @@ const Thread: React.FC = () => {
               threadId: threadId,
               acknowledged: true // Error message is always delivered
             };
+            
+            // Make the message object immutable
+            Object.freeze(errorMessage);
             setMessages((prev: Message[]) => [...prev, errorMessage]);
             setIsLoading(false);
           }
@@ -132,6 +140,9 @@ const Thread: React.FC = () => {
         threadId: threadId,
         acknowledged: true // Error message is always delivered
       };
+      
+      // Make the message object immutable
+      Object.freeze(errorMessage);
       setMessages((prev: Message[]) => [...prev, errorMessage]);
     }
   };
@@ -145,7 +156,11 @@ const Thread: React.FC = () => {
       timestamp: new Date(),
       acknowledged: true // Welcome message is always delivered
     };
+    
+    // Make the message object immutable
+    Object.freeze(welcomeMessage);
     setMessages([welcomeMessage]);
+    setIsThreadLoading(false);
   };
 
   const loadThread = async (threadId: string) => {
@@ -161,32 +176,39 @@ const Thread: React.FC = () => {
         
         if (response.data.messages && response.data.messages.length > 0) {
           response.data.messages.forEach((msg: ThreadMessage) => {
-            // Determine if this is a user or AI message based on senderId
-            // For now, assume if senderId equals current user's cbid, it's user message
-            const isUserMessage = msg.senderId === user.cbid;
+            // Determine if this is a user or AI message based on sender_id
+            // Use message.sender_id === logged in user's cb_id to detect user messages
+            const isUserMessage = msg.sender_id === user.cbid;
             
-            threadMessages.push({
+            const messageObj = {
               id: msg.cbId,
               text: msg.body,
-              sender: isUserMessage ? 'user' : 'ai',
+              sender: isUserMessage ? 'user' as const : 'ai' as const,
               timestamp: new Date(msg.createdAt),
               threadId: threadId,
               acknowledged: true // Mark all loaded messages as delivered
-            });
+            };
+            
+            // Make the message object immutable to prevent mutation
+            Object.freeze(messageObj);
+            threadMessages.push(messageObj);
           });
         } else {
           // No messages yet, add welcome message
-          threadMessages.push({
+          const welcomeMessage: Message = {
             id: `welcome-${threadId}`,
             text: `Welcome back to Thread ${threadId.slice(-6)}! Continue building your agent...`,
             sender: 'ai',
             timestamp: new Date(),
             threadId: threadId,
             acknowledged: true // System message is always delivered
-          });
+          };
+          Object.freeze(welcomeMessage);
+          threadMessages.push(welcomeMessage);
         }
         
         setMessages(threadMessages);
+        setIsThreadLoading(false);
       }
     } catch (error) {
       console.error('Error loading thread:', error);
@@ -200,6 +222,7 @@ const Thread: React.FC = () => {
         acknowledged: true // System message is always delivered
       };
       setMessages([errorMessage]);
+      setIsThreadLoading(false);
     }
   };
 
@@ -216,6 +239,9 @@ const Thread: React.FC = () => {
       threadId: threadId,
       acknowledged: false
     };
+    
+    // Make the message object immutable
+    Object.freeze(userMessage);
 
     console.log('📤 Creating user message:', userMessage);
     setMessages((prev: Message[]) => [...prev, userMessage]);
@@ -244,6 +270,9 @@ const Thread: React.FC = () => {
             acknowledged: true // Fallback AI response is always delivered
           };
           
+          // Make the message object immutable
+          Object.freeze(aiMessage);
+
           setMessages((prev: Message[]) => [...prev, aiMessage]);
 
           // Save AI message to database
@@ -268,6 +297,9 @@ const Thread: React.FC = () => {
         acknowledged: true // Error message is always delivered
       };
       
+      // Make the message object immutable
+      Object.freeze(errorMessage);
+
       setMessages((prev: Message[]) => [...prev, errorMessage]);
       setIsLoading(false);
     }
@@ -318,7 +350,15 @@ const Thread: React.FC = () => {
   }
 
   if (!user) {
-    return null; // Will redirect to login
+    // Don't return null, let the parent component handle redirect
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Please log in to continue...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -335,7 +375,7 @@ const Thread: React.FC = () => {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">AI Agent Builder</h2>
                 <p className="text-sm text-gray-500">
-                  {currentThread ? `Thread ${currentThread.cbId.slice(-6)}` : 'New conversation'}
+                  {currentThread && currentThread.cbId ? `Thread ${currentThread.cbId.toString().slice(-6)}` : 'New conversation'}
                 </p>
               </div>
             </div>
@@ -355,46 +395,62 @@ const Thread: React.FC = () => {
           </div>
         </div>
 
+        {/* Thread Loading Spinner */}
+        {isThreadLoading && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading thread...</p>
+            </div>
+          </div>
+        )}
+
         {/* Messages - Only this area should scroll */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex items-end space-x-2 ${message.sender === 'user' ? '' : ''}`}>
+        {!isThreadLoading && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+            {messages.map((message) => {
+            const isUserMessage = message.sender === 'user';
+            
+            return (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
+              >
+              <div className={`flex items-end space-x-2 ${isUserMessage ? '' : ''}`}>
                 <div className={`max-w-xs lg:max-w-lg xl:max-w-xl px-4 py-2 rounded-lg ${
-                  message.sender === 'user' 
-                    ? 'bg-gradient-to-r from-coral-600 to-brick-600 text-white' 
+                  isUserMessage 
+                    ? 'user-message' 
                     : message.id.startsWith('system') || message.id.startsWith('error')
                     ? 'bg-blue-50 text-blue-900 border border-blue-200'
                     : 'bg-gray-100 text-gray-900'
                 }`}>
+
                   <div className="text-sm whitespace-pre-wrap">{message.text}</div>
-                  <div className="text-xs mt-1 opacity-70">
+                  <div className={`text-xs mt-1 ${isUserMessage ? 'timestamp' : 'opacity-70'}`}>
                     {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
                 
                 {/* Show acknowledgment status for user messages - to the right */}
-                {message.sender === 'user' && (
+                {isUserMessage && (
                   <div className="flex-shrink-0 mb-1 ml-2">
                     {message.acknowledged ? (
-                      <div className="w-4 h-4 rounded-sm bg-gray-400 flex items-center justify-center" title="Message delivered">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="w-4 h-4 rounded-sm bg-gray-100 flex items-center justify-center" title="Message delivered">
+                        <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </div>
                     ) : (
-                      <div className="w-4 h-4 rounded-sm border-2 border-gray-300 animate-pulse" title="Sending..."></div>
+                      <div className="w-4 h-4 rounded-sm border-2 border-gray-400 animate-pulse" title="Sending..."></div>
                     )}
                   </div>
                 )}
               </div>
             </motion.div>
-          ))}
+          );
+          })}
           
           <div ref={messagesEndRef} />
           
@@ -414,6 +470,7 @@ const Thread: React.FC = () => {
             </motion.div>
           )}
         </div>
+        )}
 
         {/* Input */}
         <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
@@ -425,12 +482,12 @@ const Thread: React.FC = () => {
               onKeyPress={handleKeyPress}
               placeholder="Describe your agent idea and I'll help you build it..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-              disabled={!websocketService.isConnected() && wsConnectionStatus !== 'connecting'}
+              disabled={!websocketService.isConnected() && wsConnectionStatus !== 'connecting' || isThreadLoading}
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading || !websocketService.isConnected()}
-              className="px-4 py-2 bg-gradient-to-r from-coral-600 to-brick-600 text-white rounded-lg hover:from-coral-700 hover:to-brick-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!inputMessage.trim() || isLoading || !websocketService.isConnected() || isThreadLoading}
+              className="px-4 py-2 bg-gradient-to-r from-coral-600 to-brick-700 text-white rounded-lg hover:from-coral-700 hover:to-brick-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <PaperAirplaneIcon className="w-4 h-4" />
             </button>

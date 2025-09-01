@@ -30,4 +30,15 @@
   .container-max {
     @apply max-w-7xl mx-auto;
   }
+  
+  /* Ensure user messages are always coral colored */
+  .user-message {
+    background: linear-gradient(135deg, #ea7a5a 0%, #d65a5a 100%) !important;
+    color: white !important;
+    box-shadow: 0 4px 6px -1px rgba(234, 122, 90, 0.3) !important;
+  }
+  
+  .user-message .timestamp {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
 } 

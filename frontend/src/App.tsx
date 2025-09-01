@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Thread from './pages/Thread';
 import Pipeline from './pages/Pipeline';
+import InternalDebugger from './components/InternalDebugger';
 import { useAuth } from './contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -49,7 +50,15 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!user) {
-    return null; // Will redirect to login
+    // Don't return null, let the redirect effect handle it
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleThreadSelect = (threadId: string) => {
@@ -133,6 +142,14 @@ function App() {
               element={
                 <MainLayout>
                   <Pipeline />
+                </MainLayout>
+              } 
+            />
+            <Route 
+              path="/intern/message" 
+              element={
+                <MainLayout>
+                  <InternalDebugger />
                 </MainLayout>
               } 
             />

@@ -32,10 +32,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Check localStorage for cached user data
         const storedUser = localStorage.getItem('coralbricks_user');
+        console.log('Checking localStorage for user data...');
         if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          console.log('Found cached user data:', userData);
-          setUser(userData);
+          try {
+            const userData = JSON.parse(storedUser);
+            console.log('Found cached user data:', userData);
+            if (userData && userData.cbid) {
+              setUser(userData);
+              console.log('User set successfully:', userData.cbid);
+            } else {
+              console.log('Invalid user data format, clearing cache');
+              localStorage.removeItem('coralbricks_user');
+            }
+          } catch (error) {
+            console.error('Error parsing cached user data:', error);
+            localStorage.removeItem('coralbricks_user');
+          }
         } else {
           console.log('No cached user data found');
         }

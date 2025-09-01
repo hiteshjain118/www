@@ -38,6 +38,11 @@ const Navigation: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
+  const handleDebugClick = () => {
+    navigate('/intern/message');
+    setIsDropdownOpen(false);
+  };
+
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
@@ -105,6 +110,12 @@ const Navigation: React.FC = () => {
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
                 >
                   Create Agent
+                </button>
+                <button
+                  onClick={handleDebugClick}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                >
+                  Debug Tools
                 </button>
                 <div className="border-t border-gray-200 my-1"></div>
                 <button

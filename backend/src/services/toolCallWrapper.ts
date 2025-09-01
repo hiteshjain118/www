@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
 import { IToolCall, ToolCallResult } from "coralbricks-common";
-import { log } from "../utils/logger";
+import { enhancedLogger as log } from "../utils/logger";
 import { Response } from "express";
 import { QBProfile } from "../types/profiles";
 import { QBDataSchemaRetriever } from "../qbo/qbDataSchemaRetriever";
