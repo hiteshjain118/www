@@ -2,7 +2,7 @@
 
 import { ChatCompletionMessage, ChatCompletionMessageCustomToolCall, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
 import { ToolCallRunner } from "../tool-call-runner";
-import { ToolCallResult } from 'coralbricks-common';
+import { log, ToolCallResult } from 'coralbricks-common';
 
 
 export interface IModelPrompt {
@@ -72,6 +72,7 @@ export class ModelOutputParser {
     if (message.tool_calls && message.tool_calls.length > 0) {
       this.toolCalls = message.tool_calls as ChatCompletionMessageToolCall[] | ChatCompletionMessageCustomToolCall[];
     } 
+    log.info(`gpt call success content: ${this.responseContent} tool_calls: ${this.toolCalls.length}`);
     return this;
   }
 

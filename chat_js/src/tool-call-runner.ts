@@ -1,6 +1,7 @@
 import { 
   ToolCallResult,
   QueryType,
+  log,
 } from 'coralbricks-common';
 import { ChatCompletionMessageCustomToolCall, ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 import axios from 'axios';
@@ -25,7 +26,7 @@ export class ToolCallRunner {
     };
   }>;
   private retrievalTasksScheduled: bigint[] = [];
-  private tcWrapperExecutor: TCWrapperExecutor | null = null;
+  private tcWrapperExecutor: TCWrapperExecutor;
 
   constructor(thread_id: bigint, cb_profile_id: bigint) {
     this.threadId = thread_id;
@@ -33,6 +34,7 @@ export class ToolCallRunner {
     this.internalApiUrl = process.env.INTERNAL_API_URL || 'http://localhost:3001';
     this.enabledTools = [];
     this.enabledToolDescriptions = [];
+    this.tcWrapperExecutor = new TCWrapperExecutor(this.threadId);
   }
 
   async run_tools(toolCalls: ChatCompletionMessageToolCall[] | ChatCompletionMessageCustomToolCall[]): Promise<Record<string, ToolCallResult>> {
@@ -74,45 +76,33 @@ export class ToolCallRunner {
     tool_arguments: string,
   ): Promise<ToolCallResult> {
     let result: ToolCallResult;
-   
+   const start_time = Date.now();
     try {
-      const tool_arguments_json = JSON.parse(tool_arguments);
-      console.log(`Running tool call id:${tool_call_id} name:${tool_name} with arguments ${JSON.stringify(tool_arguments)}`);
-      
-      
+      const tool_arguments_json = JSON.parse(tool_arguments);      
       if (tool_name === 'typescript_executor') {
-        result = await this.run_typescript_executor(tool_arguments_json);
+        result = await this.run_typescript_executor(tool_call_id, tool_name, tool_arguments_json);
       } else if (['qb_data_schema_retriever', 'qb_data_size_retriever'].includes(tool_name)) {
         result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "retrieve");
       } else if(tool_name === 'qb_user_data_retriever') {
         result = await this.callInternalAPI(tool_name, tool_call_id, tool_arguments_json, "schedule");
         this.retrievalTasksScheduled.push(result.scheduled_task_id as bigint);
-        this.tcWrapperExecutor = null;
       } else {
-        result = ToolCallResult.error(
-          tool_name,
-          tool_call_id,
-          this.threadId,
-          "InvalidToolName",
-          `Tool ${tool_name} not found`
-        );
+        throw new Error(`Tool ${tool_name} not found`);
       }
     } catch (error) {
       result = ToolCallResult.error(
         tool_name,
         tool_call_id,
         this.threadId,
-        "ToolCallError",
-        error instanceof Error ? error.message : 'Unknown error occurred'
+        error instanceof Error ? error.constructor.name : "ToolCallError",
+        error instanceof Error ? error.message : String(error)
       );
+      const error_message = error instanceof Error ? error.message : String(error);
+      const stack_trace = error instanceof Error ? error.stack || error.message : String(error);
+      log.error(`Tool ${tool_call_id} failed with error ${error_message} stack ${stack_trace}`);
     }
-    if (result.status === "error") {
-      console.error(`Tool ${tool_call_id} failed:`, result.toLogMessage());
-      console.debug(`Detailed error info:`, result.toLoggableString());
-    } else {
-      console.log(`Tool ${tool_call_id} succeeded:`, result.toLogMessage());
-      console.debug(`Detailed success info:`, result.toLoggableString());
-    }
+    const duration_ms = Date.now() - start_time;
+    log.info(`Tool ID:${tool_call_id} name:${tool_name} took ${duration_ms}ms`);
     
     return result;
   }
@@ -120,61 +110,43 @@ export class ToolCallRunner {
   /**
    * Call the internal backend API for QB tools
    */
-  private async callInternalAPI(
-    toolName: string, 
-    toolCallId: string, 
-    toolArguments: Record<string, any>,
+  public async callInternalAPI(
+    tool_name: string, 
+    tool_call_id: string, 
+    tool_arguments: Record<string, any>,
     query_type: "retrieve" | "schedule" = "retrieve"
   ): Promise<ToolCallResult> {
-    try {
       const requestBody = {
         cbid: this.cbProfileId.toString(),
         thread_id: this.threadId.toString(),
-        tool_call_id: toolCallId,
+        tool_call_id: tool_call_id,
         query_type: query_type,
-        ...toolArguments
+        ...tool_arguments
       };
 
-      console.log(
-        `Making tool call ${toolName} to ${this.internalApiUrl}`,
-        `with body ${JSON.stringify(requestBody)}`
-      );
+      log.info(`Running tool call id:${tool_call_id} name:${tool_name} with arguments ${JSON.stringify(tool_arguments)} for thread ${this.threadId}`);
       
-      const response = await axios.post(`${this.internalApiUrl}/${toolName}`, requestBody, {
+      const response = await axios.post(`${this.internalApiUrl}/${tool_name}`, requestBody, {
         headers: {
           'Content-Type': 'application/json',
           'X-Internal-Service': 'chat_js'
         },
         timeout: 30000 // 30 second timeout
+      }).then((response) => {
+        log.info(`Tool call ${tool_name} returned response ${`status: ${response.status}, data: ${JSON.stringify(response.data)}`}`);
+        return ToolCallResult.from_api_response(response.data);
+      }).catch((error) => {
+        const error_response = error.response;
+        log.error(`Tool call ${tool_name} returned error ${`status: ${error_response.status}, data: ${JSON.stringify(error_response.data)}`}`);
+        return ToolCallResult.from_api_response(error_response.data);
       });
-
-      return ToolCallResult.from_api_response(response.data);
-
-    } catch (error) {
-      return ToolCallResult.error(
-        toolName, 
-        toolCallId, 
-        this.threadId, 
-        "ToolCallError", 
-        error instanceof Error ? error.message : 'Unknown error occurred'
-      );
-    }
+      return response;
+  
   }
 
-  private async run_typescript_executor(args: Record<string, any>): Promise<ToolCallResult> {
-    if (this.tcWrapperExecutor === null) {
-      this.tcWrapperExecutor = new TCWrapperExecutor(
-        this.threadId, 
-        args.id, 
-        args.name, 
-        args, 
-        QueryType.RETRIEVE, 
-        0, 
-        this.retrievalTasksScheduled
-      );
-    }
-  
-    return await this.tcWrapperExecutor.wrap();
+  private async run_typescript_executor(tool_call_id: string, tool_name: string, tool_arguments: Record<string, any>): Promise<ToolCallResult> {
+    await this.tcWrapperExecutor.waitForDependencies(this.retrievalTasksScheduled);
+    return await this.tcWrapperExecutor.wrap(tool_call_id, tool_arguments, tool_name, QueryType.RETRIEVE, 0);
   }
 
   async get_enabled_tools(): Promise<string[]> {

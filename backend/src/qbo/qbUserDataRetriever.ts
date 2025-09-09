@@ -38,15 +38,22 @@ export class QBUserDataRetriever extends HTTPRetriever implements IToolCall {
     }
     
     if (!query.includes('ORDER BY')) {
-      throw new Error('ORDER BY clause is missing');
+      throw new Error('ORDER BY clause is missing. Please add it to the query.');
+    }
+    
+    if (query.includes('BETWEEN')) {
+      throw new Error('BETWEEN clause is not supported. Please remove the BETWEEN clause from the query.');
     }
     
     if (this.expected_row_count === null || this.expected_row_count === undefined || this.expected_row_count < 0) {
-      throw new Error('Expected row count must be provided and greater than or equal to 0');
+      throw new Error(
+        'Expected row count must be provided and greater than or equal to 0. ' +
+        'Please provide a valid expected row count.'
+      );
     }
     
     if (this.expected_row_count > 1000) {
-      throw new Error('Expected row count must be less than 1000');
+      throw new Error('Expected row count must be less than 1000. Please reduce the expected row count.');
     }
   }
 
@@ -95,16 +102,19 @@ export class QBUserDataRetriever extends HTTPRetriever implements IToolCall {
   getBlobPath(): string {
     return this._cache_key();
   }
-  
+
   protected _cache_key(): string {
-    const params_hash_6chars = crypto
+    const params_hash_6chars = this.get_params_hash();
+    return `qb_user_data_retriever_${this.endpoint}_${this.extract_query_response_key()}_${params_hash_6chars}`;
+  }
+
+  protected get_params_hash(): string {
+    return crypto
       .createHash('sha256')
       .update(JSON.stringify(this.params))
       .digest('hex')
       .slice(0, 6);
-    return `qb_user_data_retriever_${this.endpoint}_${this.extract_query_response_key()}_${params_hash_6chars}`;
   }
-
   api_summary(): string {
     return "Makes QB HTTP calls using endpoint and params to get user data";
   }
@@ -129,6 +139,10 @@ export class QBUserDataRetriever extends HTTPRetriever implements IToolCall {
       this.caller_id,
       this.thread_id
     );
+  }
+
+  getModelHandleName(): string {
+    return this.extract_query_response_key() + '_' + this.get_params_hash();
   }
 
   static tool_name(): string {

@@ -21,52 +21,50 @@ export { QueryType };
 class TCWrapperBackend extends ToolCallWrapper {
   constructor(
     thread_id: bigint,
+    protected qboProfile: QBProfile,
+  ) {
+    super(thread_id);
+  }
+
+  public getToolInstance(
     tool_call_id: string,
     tool_name: string,
     tool_args: any,
-    protected qboProfile: QBProfile,
-    query_type_enum: QueryType,
-    scheduled_delay_ms: number = 1,
-    depends_on_task_ids: bigint[] = []
-  ) {
-    super(thread_id, tool_call_id, tool_name, tool_args, query_type_enum, scheduled_delay_ms, depends_on_task_ids);
-  }
-
-  public get_tool_instance(): IToolCall {
-    switch (this.toolName) {
+  ): IToolCall {
+    switch (tool_name) {
       case 'qb_data_size_retriever':
-        if (!this.toolArgs.query) {
+        if (!tool_args.query) {
           throw new Error('Missing required parameter for qb_data_size_retriever: query');
         }
         return new QBDataSizeRetriever(
           this.qboProfile,
           this.threadId,
-          this.toolCallId,
-          this.toolArgs.query
+          tool_call_id,
+          tool_args.query
         );
         
       case 'qb_data_schema_retriever':
-        if (!this.toolArgs.table_name) {
+        if (!tool_args.table_name) {
           throw new Error('Missing required parameter for qb_data_schema_retriever: table_name');
         }
         return new QBDataSchemaRetriever(
           this.qboProfile,
           this.threadId,
-          this.toolCallId,
-          this.toolArgs.table_name
+          tool_call_id,
+          tool_args.table_name
         );
         
       case 'qb_user_data_retriever':
-        if (!this.toolArgs.endpoint || !this.toolArgs.parameters || this.toolArgs.expected_row_count === undefined) {
+        if (!tool_args.endpoint || !tool_args.parameters || tool_args.expected_row_count === undefined) {
           throw new Error('Missing required parameters for qb_user_data_retriever: endpoint, parameters, expected_row_count');
         }
         return new QBUserDataRetriever(
           this.qboProfile,
           this.threadId,
-          this.toolCallId,
-          this.toolArgs.endpoint,
-          this.toolArgs.parameters,
-          this.toolArgs.expected_row_count
+          tool_call_id,
+          tool_args.endpoint,
+          tool_args.parameters,
+          tool_args.expected_row_count
         );
         
       default:

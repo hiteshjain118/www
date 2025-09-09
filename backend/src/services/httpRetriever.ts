@@ -110,7 +110,9 @@ export abstract class HTTPRetriever implements IRetriever {
 
       return [json_response, num_items];
     } catch (error) {
-      log.error(`API call failed: ${error} caller_id: ${this.caller_id}` +
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      log.error(`API call failed: ${errorMessage}` +
+        ` caller_id: ${this.caller_id}` +
         ` url: ${url}` +
         ` params: ${JSON.stringify(params)}` +
         ` start_pos: ${this.start_pos}` +

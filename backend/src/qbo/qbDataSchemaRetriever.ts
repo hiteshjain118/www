@@ -30,6 +30,10 @@ export class QBDataSchemaRetriever extends HTTPRetriever implements IToolCall {
     assert(this.table_name.length > 0, "Table name is required");
   }
 
+  getModelHandleName(): string {
+    throw new Error('Not implemented');
+  }
+  
   protected _get_base_url(): string {
     return `${this.qbo_profile.get_base_url()}${this._get_endpoint()}`;
   }

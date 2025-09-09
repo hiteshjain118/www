@@ -26,15 +26,18 @@ export class QBDataSizeRetriever extends HTTPRetriever implements IToolCall {
   }
 
   async validate(): Promise<void> {
-    // generate code to reject malformed queries, subqueries, joins and aliases
-    // and return false if the query is invalid
-    // if query is valid, return true
-    
     assert(await this.qbo_profile.getValidAccessTokenWithRefresh() !== null); 
     assert(
         this.query.includes('COUNT(*)'), 
         "Query is invalid, should be like SELECT COUNT(*) FROM Bill WHERE TxnDate = '2025-01-01'"
     );
+    if (this.query.includes('BETWEEN')) {
+      throw new Error('BETWEEN clause is not supported');
+    }
+  }
+
+  getModelHandleName(): string {
+    throw new Error('Not implemented');
   }
 
   protected _get_base_url(): string {

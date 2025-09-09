@@ -20,6 +20,9 @@ global.console = {
 // Global test timeout
 jest.setTimeout(10000);
 
+// Mock Prisma service to avoid database issues in case tests need it
+// Individual test files should handle their own specific mocking
+
 // Clean up after each test
 afterEach(() => {
   jest.clearAllMocks();

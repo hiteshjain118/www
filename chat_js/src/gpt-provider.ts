@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { LLMMonitor } from './llm-monitor';
 import { ModelIO, IModelProvider, ModelOutputParser } from './types/modelio';
-import { ToolDescription } from 'coralbricks-common';
+import { log, ToolDescription } from 'coralbricks-common';
 
 /**
  * OpenAI GPT model provider implementation
@@ -18,13 +18,13 @@ export class GPTProvider implements IModelProvider {
     this.client = new OpenAI({ apiKey: apiKey });
     this.llmMonitor = new LLMMonitor(model, "GPTProvider");
     
-    console.info(`Initialized GPTProvider with model: ${model}`);
+    log.info(`Initialized GPTProvider with model: ${model}`);
   }
 
   async get_response(modelIO: ModelIO): Promise<ModelOutputParser> {
     const messages = modelIO.prompt.get_messages();
 
-    console.debug(`Sending request to GPT: ${JSON.stringify(messages)}, from prompt_type: ${typeof modelIO.prompt}`);
+    log.debug(`Sending request to GPT: ${JSON.stringify(messages)}, from prompt_type: ${typeof modelIO.prompt}`);
 
     try {
       // Make the actual OpenAI API call
@@ -36,7 +36,7 @@ export class GPTProvider implements IModelProvider {
         tools: await modelIO.tool_call_runner.get_enabled_tool_descriptions(),
       });
 
-      console.debug(`GPT response: ${JSON.stringify(response)}`);
+      log.debug(`GPT response: ${JSON.stringify(response)}`);
 
       // Get the response content
       const choice = response.choices[0];
@@ -57,8 +57,8 @@ export class GPTProvider implements IModelProvider {
       return modelIO.get_output_parser().set_message(message);
 
     } catch (error: unknown) {
-      console.error(`Error in GPT response: ${error}`);
-      console.error(`Stack trace: ${error instanceof Error ? error.stack : 'No stack trace'}`);
+      log.error(`Error in GPT response: ${error}`);
+      log.error(`Stack trace: ${error instanceof Error ? error.stack : 'No stack trace'}`);
       
       // Return error response
       return modelIO.get_output_parser().set_error(error);

@@ -1,5 +1,6 @@
 import { IToolCall, ToolCallResult } from "./tool-call-result";
 import { TaskService, TaskStatus } from "../prisma/taskService";
+import { log } from "../utils/logger";
 
 export enum QueryType {
   RETRIEVE = "retrieve",
@@ -11,39 +12,55 @@ export enum QueryType {
 export abstract class ToolCallWrapper {
   constructor(
     protected threadId: bigint, 
-    protected toolCallId: string, 
-    protected toolName: string,
-    protected toolArgs: any,
-    protected queryType: QueryType,
-    protected scheduledDelayMs: number = 1,
-    protected dependsOnTaskIds: bigint[] = []
   ) {}
 
-  async run(res: any): Promise<void> {
-    const tool_call_result = await this.wrap();
-    const status = tool_call_result.status === 'success' ? 200 : 500;
+  async run(
+    tool_call_id: string, 
+    tool_args: any,
+    tool_name: string,
+    query_type: QueryType,
+    scheduled_delay_ms: number = 1,
+    res: any
+  ): Promise<void> {
+    const tool_call_result = await this.wrap(tool_call_id, tool_args, tool_name, query_type, scheduled_delay_ms);
+    const status = tool_call_result.status !== 'error' ? 200 : 400;
     res.status(status).json(tool_call_result.as_api_response());
   }
 
-  async wrap(): Promise<ToolCallResult> {
-    let tool_call_result: ToolCallResult;
+  public async waitForDependencies(
+    depends_on_task_ids: bigint[] = []
+  ): Promise<void> {   
+  }
+
+  async wrap(
+    tool_call_id: string, 
+    tool_args: any,
+    tool_name: string,
+    query_type: QueryType,
+    scheduled_delay_ms: number = 1,
+  ): Promise<ToolCallResult> {
+    let tool_call_result: ToolCallResult | undefined = undefined;
     try {
-      const tool_instance = this.get_tool_instance();
-      
-      if (this.queryType === QueryType.VALIDATE) {
+      log.info(`getting Tool instance: ${tool_name}`);
+      console.log(`getting Tool instance: ${tool_name}`);
+
+      const tool_instance = this.getToolInstance(tool_call_id, tool_name, tool_args);
+      log.info(`Tool instance: ${tool_instance}`);
+      console.log(`Tool instance: ${tool_instance}`);
+      if (query_type === QueryType.VALIDATE) {
         await tool_instance.validate();
-        tool_call_result = ToolCallResult.success(this.toolName, {}, this.toolCallId, this.threadId);
-      } else if (this.queryType === QueryType.SCHEDULE) {
+        tool_call_result = ToolCallResult.success(tool_name, {}, tool_call_id, this.threadId);
+      } else if (query_type === QueryType.SCHEDULE) {
         await tool_instance.validate();
         const task = await TaskService.getInstance().createTask({
           threadId: this.threadId,
-          toolCallId: this.toolCallId,
-          toolCallName: this.toolName,
-          toolCallArgs: this.toolArgs,
-          handleForModel: this.toolCallId + '_' + this.toolName,
+          toolCallId: tool_call_id,
+          toolCallName: tool_name,
+          toolCallArgs: tool_args,
+          handleForModel: tool_instance.getModelHandleName(),
           blobPath: tool_instance.getBlobPath(),
         });
-        tool_call_result = ToolCallResult.scheduled(this.toolName, this.toolCallId, this.threadId, task.handleForModel, task.cbId);
+        tool_call_result = ToolCallResult.scheduled(tool_name, tool_call_id, this.threadId, task.handleForModel, task.cbId);
         // schedule to run tool in background 
         setTimeout(async () => {
           try {
@@ -51,10 +68,10 @@ export abstract class ToolCallWrapper {
             await TaskService.getInstance().updateTaskStatus(task.cbId, TaskStatus.COMPLETED);
           } catch (error) {
             await TaskService.getInstance().updateTaskStatus(task.cbId, TaskStatus.FAILED);
-            console.error(`Error executing tool ${this.toolName} in task ${task.cbId}, threadId: ${this.threadId}, toolCallId: ${this.toolCallId}, error: ${error}`);
+            log.error(`Error executing tool ${tool_name} in task ${task.cbId}, threadId: ${this.threadId}, toolCallId: ${tool_call_id}, error: ${error}`);
           }
-        }, this.scheduledDelayMs);
-      } else if (this.queryType === QueryType.RETRIEVE) {
+        }, scheduled_delay_ms);
+      } else if (query_type === QueryType.RETRIEVE) {
         tool_call_result = await tool_instance.call_tool();
       } else {
         throw new Error("Invalid query type");
@@ -63,29 +80,32 @@ export abstract class ToolCallWrapper {
       if (error && typeof error === 'object' && 'constructor' in error && error.constructor.name === 'AxiosError') {
         const axiosError = error as any;
         tool_call_result = ToolCallResult.error(
-          this.toolName,
-          this.toolCallId,
+          tool_name,
+          tool_call_id,
           this.threadId,
           axiosError.constructor.name,
           axiosError.message,
           axiosError.response?.status
         );
-        console.error(`HTTP error while executing tool ${this.toolName}: ${tool_call_result.toLogMessage()}`);
-        console.debug(`Detailed error info: ${tool_call_result.toLoggableString()}`);
       } else {
         tool_call_result = ToolCallResult.error(
-          this.toolName,
-          this.toolCallId,
+          tool_name,
+          tool_call_id,
           this.threadId,
           error instanceof Error ? error.constructor.name : 'UnknownError',
           error instanceof Error ? error.message : 'Unknown error'
         );
-        console.error(`Error executing tool ${this.toolName}: ${tool_call_result.toLogMessage()}`);
-        console.debug(`Detailed error info: ${tool_call_result.toLoggableString()}`);
       }
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const stackTrace = error instanceof Error ? error.stack || error.message : String(error);
+      log.error(`Tool ${tool_call_id} name: ${tool_name} failed with error ${errorMessage} stack ${stackTrace}`);
     }
-    return tool_call_result;
+    return tool_call_result!;
   }
 
-  protected abstract get_tool_instance(): IToolCall;
+  protected abstract getToolInstance(
+    tool_call_id: string, 
+    tool_name: string,
+    tool_args: any,
+  ): IToolCall;
 } 

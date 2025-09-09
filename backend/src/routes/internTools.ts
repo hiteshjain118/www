@@ -13,6 +13,7 @@ const router = express.Router();
 router.get('/message/model_events', async (req, res) => {
   try {
     const messageId = req.query.messageId;
+    log.info(`Fetching model events for message ID: ${messageId}`);
     
     if (!messageId || typeof messageId !== 'string') {
       return res.status(400).json({
@@ -21,9 +22,7 @@ router.get('/message/model_events', async (req, res) => {
         message: 'Please provide a valid messageId as a query parameter'
       });
     }
-    
-    log.info(`Fetching model events for message ID: ${messageId}`, { messageId });
-    
+        
     // Convert messageId to BigInt for database query
     const messageIdBigInt = BigInt(messageId);
     
@@ -32,18 +31,7 @@ router.get('/message/model_events', async (req, res) => {
     const modelEvents = await modelEventService.getModelEventsByAssistantMessageId(messageIdBigInt) as ModelEventWithTasks[];
     
     // Transform the data to match the frontend expectations
-    const transformedEvents = modelEvents.map(event => {
-      // Debug logging to see what fields are available
-      log.info('Raw event data:', {
-        cbId: event.cbId,
-        systemPrompt: event.systemPrompt,
-        inputPrompt: event.inputPrompt,
-        toolCalls: event.toolCalls,
-        threadId: event.threadId,
-        senderId: event.senderId,
-        responseContent: event.responseContent
-      });
-      
+    const transformedEvents = modelEvents.map(event => {      
       return {
         id: Number(event.cbId),
         message_id: messageId,
@@ -64,7 +52,8 @@ router.get('/message/model_events', async (req, res) => {
         }
       };
     });
-    
+    log.info(`Fetched ${transformedEvents.length} model events for message ID: ${messageId}`);
+
     return res.json({
       success: true,
       message: `Model events for message ID: ${messageId}`,

@@ -41,8 +41,9 @@ export class QBServerPrompt implements IModelPrompt {
       "to validate if your query plan can be executed within the available resources.\n" +
       "- qb_user_data_retriever which runs an authenticated Quickbooks platform api " +
       "to retrieve user's data from Quickbooks.\n" +
-      "- python_function_runner which expects an analyze() python function and " +
-      "returns a pandas dataframe. The function should be defined by you.\n" +
+      "- qb_typescript_executor which executes a TypeScript code to analyze the user's data.\n" +
+      // "- python_function_runner which expects an analyze() python function and " +
+      // "returns a pandas dataframe. The function should be defined by you.\n" +
       "Do not make up any other tools. You can also ask the user for more information.\n" +
 
       "# Guidance on Phase: Query plan development\n" +
@@ -93,8 +94,11 @@ export class QBServerPrompt implements IModelPrompt {
       "You will retrieve user's data from Quickbooks using qb_user_data_retriever tool. " +
       "qb_user_data_retriever tool provides you access to authenticated Quickbooks " +
       "platform https api. You will provide the endpoint and parameters to the " +
-      "tool call. The tool call will call the platform api for you. Be very sure " +
-      "about the existence of the endpoint and parameters before running the tool call.\n" +
+      "tool call. Be very sure about the existence of the endpoint and parameters " +
+      "before running the tool call. The tool call will call the platform api for you. " +
+      "It will return a handle name which you will use to access the data in the next phase. " +
+      "The handle name is tablename_{hash} where hash is a 6 character hash " +
+      "of the endpoint and parameters.\n" +
       "Examples of endpoint and parameters below:\n" +
       "Good Example 1:\n" +
       "endpoint: query\n" +
@@ -104,6 +108,12 @@ export class QBServerPrompt implements IModelPrompt {
       "endpoint: query\n" +
       "parameters: {\"query\": \"SELECT * FROM Bill WHERE TxnDate = '2025-01-01' ORDER BY Id\"}\n" +
       "expected_row_count: 123\n" +
+      "Good Example 3:\n" +
+      "endpoint: query\n" +
+      "parameters: {\"query\": \"SELECT * FROM Invoice WHERE TxnDate >= '2025-06-01' AND TxnDate <= '2025-06-30' ORDER BY Id\"}\n" +
+      "expected_row_count: 20\n" +
+      "Response: {\"status\": \"scheduled\", \"tool_name\": \"qb_user_data_retriever\", \"tool_call_id\": \"call_N85yjcIvpigRwhxFl7LEFSwo\", \"thread_id\": \"35184372088912\", \"model_handle_name\": \"Invoice_e5285d\", \"scheduled_task_id\": \"35184372089225\"}\n" +
+
       "Bad Example 1:\n" +
       "endpoint: query\n" +
       "parameters: {\"query\": \"SELECT Line.ItemRef.FullName, Line.Amount FROM Bill WHERE TxnDate = '2025-08-08' ORDER BY Id\"}\n" +
@@ -113,6 +123,7 @@ export class QBServerPrompt implements IModelPrompt {
       "endpoint: query\n" +
       "parameters: {\"query\": \"SELECT * FROM Item ORDER BY Id\"}\n" +
       "Response: {\"status\": \"error\", \"tool_name\": \"qb_user_data_retriever\", \"content\": {\"error_type\": \"ValueError\", \"error_message\": \"Expected row count must be provided and greater than or equal to 0\", \"status_code\": null}\n" +
+      
       "Bad Example 5:\n" +
       "endpoint: query\n" +
       "parameters: {\"query\": \"SELECT * FROM Item\"}\n" +
@@ -136,7 +147,7 @@ export class QBServerPrompt implements IModelPrompt {
       "improving your understanding of the request.\n\n" +
       
 
-      this.get_python_analysis_prompt() +
+      this.get_typescript_analysis_prompt() +
 
       "#Guidance on Phase: Summarize analysis and respond to user\n" +
       "Your responses should be a valid JSON object. Don't insert extra text " +
@@ -209,14 +220,76 @@ export class QBServerPrompt implements IModelPrompt {
 
   get_typescript_analysis_prompt(): string {
     return (
-      "You are a Quickbooks assistant that helps the user with understanding " +
-      "their Quickbooks data. You are very knowledgeable about Quickbooks platform " +
-      "and their capabilities. When the user comes to you with a request, you will follow " +
-      "the following steps to help the user:\n" +
+      "# Guidance on Phase: Analysis\n" +
+      "You enter this phase only after you have retrieved user's data " +
+      "from Quickbooks. You generate a single self-contained TypeScript module for Node 20. " +
+      "RUNTIME CONTRACT:\n" +
+      "- If you make any assumptions, add them as code comments.\n"+ 
+      "- Assume the code runs in a sandbox with CommonJS.\n"+
+      "- Your code MUST:\n" +
+      "1. Define: export type Output = unknown;  // you will redefine precisely per task\n" +
+      "2. Define: async function run(context: { __userData: Record<string, any[]> }): Promise<Output> { /* your logic */ }\n" +
+      "3. Execute: (async () => { return await run({ __userData }); })(); // Execute in async IIFE\n" +
+      "- Do NOT use module.exports. The async IIFE will execute immediately and return the result.\n" +
+      "- EXAMPLE PATTERN:\n" +
+      "  async function run(context) {\n" +
+      "    const data = context.__userData;\n" +
+      "    // Get the specific table data using the known handle name\n" +
+      "    const records = data[model_handle_name] || [];  // use the handle name (e.g., 'Invoice_e5285d')\n" +
+      "    if (!Array.isArray(records) || records.length === 0) {\n" +
+      "      return { error: 'No data available' };\n" +
+      "    }\n" +
+      "    // IMPORTANT: Include debug info in response for troubleshooting\n" +
+      "    const debugInfo = {\n" +
+      "      handleName,\n" +
+      "      recordCount: records.length,\n" +
+      "      sampleRecord: records[0],\n" +
+      "      availableFields: Object.keys(records[0] || {})\n" +
+      "    };\n" +
+      "    // Process records safely: records.forEach(record => { ... })\n" +
+      "    // Return { ...yourResult, debugInfo } to help troubleshoot\n" +
+      "  }\n" +
+      "- The function must be pure w.r.t. inputs (no global mutation) and must "+
+      "return a SMALL result object (e.g., aggregates, summaries, top-N rows)."+
+      "Never return the whole dataset.\n\n" +
+      "- If you code fails with syntax or runtime errors, fix it and retry the " +
+      "tool call.\n\n" +
+
+      "DATA ACCESS:\n" +
+      "- The user data is available in context.__userData as a map where keys are model handle names.\n" +
+      "- Model handle names follow the pattern: 'tablename_hash' (e.g., 'Invoice_abc123')\n" +
+      "- To access QB table data: const tableData = context.__userData[model_handle_name] || [];\n" +
+      "- ALWAYS validate data exists: if (!Array.isArray(tableData) || tableData.length === 0) { return { error: 'No data available' }; }\n" +
+      "- DEBUG: Always add console.log statements to inspect data structure and content.\n" +
+      "- Each array element is a QB API response object with table-specific fields.\n" +
+      "- QB field naming varies: Try CustomerRef?.name, Customer?.Name, CustomerName for customer names.\n" +
+      "- For amounts try: TotalAmt, Amount, Total, LineTotal, Balance.\n" +
+      "- Include debugInfo in your response showing: model_handle_name, recordCount, sampleRecord, availableFields.\n" +
+      "- Treat all fields as optional; handle missing/undefined/null safely.\n" +
+      "- Do NOT fetch data, read files, or import any packages (no fs, net, process, require).\n\n" +
+      
+      "DATA PROCESSING:\n" +
+      "- Carefully understand the user question and process the data within the 'run' function.\n" +
+      "- ALWAYS start with: const records = context.__userData[model_handle_name] || [];\n" +
+      "- DEBUG FIRST: Include debug info in your response: { debugInfo: { model_handle_name, recordCount: records.length, sampleRecord: records[0], availableFields: Object.keys(records[0] || {}) } }\n" +
+      "- Check data structure: Inspect records[0]?.CustomerRef, records[0]?.TotalAmt, and all available fields.\n" +
+      "- If CustomerRef?.name is null/undefined, try other customer field patterns: Customer?.Name, CustomerName, etc.\n" +
+      "- If TotalAmt is null/undefined, try other amount field patterns: Amount, Total, LineTotal, etc.\n" +
+      "- Validate field access patterns before processing the full dataset.\n" +
+      "- Return a concise object with a 'summary' (counts, ranges) and 'rows' (top insights).\n" +
+      "- Never exceed ~200KB output; truncate with 'truncated: true' if needed.\n\n" +
+      
+      "DELIVERABLE:\n" +
+      "- Output ONLY a single TypeScript code block. No prose.\n\n" +
+     
+      "QUALITY & SAFETY:\n" +
+      "- No console output except when strictly necessary for debugging. Prefer returning structured results.\n" +
+      "- Use narrow local types (interfaces) for the subset you actually read; do not over-model QuickBooks.\n" +
+      "- Avoid O(n^2) patterns on large arrays; prefer maps, single-pass reductions, and chunked iteration.\n\n"
     )
   }
   get_python_analysis_prompt(): string {
-    return 
+    return (
     "# Guidance on Phase: Analysis\n" +
     "You will enter this phase only after you have retrieved user's data " +
     "from Quickbooks. You will use the data to run a python function for analysis. " +
@@ -252,8 +325,7 @@ export class QBServerPrompt implements IModelPrompt {
     "    # Run business logic invariants\n" +
     "    # Prepare result dataframe for the user by extracting the relevant columns\n" +
     "    # Return result dataframe\n" +
-    "```\n\n" +
-
-    
+    "```\n\n"
+    )
   }
 } 

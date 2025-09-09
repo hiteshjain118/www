@@ -24,7 +24,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 10000,
   verbose: true,
-  clearMocks: true,
-  restoreMocks: true,
-  resetMocks: true
+  clearMocks: false,
+  restoreMocks: false,
+  resetMocks: false
 }; 

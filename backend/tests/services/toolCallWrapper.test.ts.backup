@@ -3,19 +3,8 @@ jest.mock('../../src/qbo/qbDataSchemaRetriever');
 jest.mock('../../src/qbo/qbDataSizeRetriever');
 jest.mock('../../src/qbo/qbUserDataRetriever');
 
-// Mock only TaskService from coralbricks-common
-jest.mock("coralbricks-common", () => ({
-  ...jest.requireActual("coralbricks-common"),
-  TaskService: {
-    getInstance: jest.fn(() => ({
-      createTask: jest.fn().mockResolvedValue({
-        cbId: BigInt(456),
-        handleForModel: "TestTable_abc123"
-      }),
-      updateTaskStatus: jest.fn().mockResolvedValue(undefined)
-    }))
-  }
-}));
+// Mock coralbricks-common with manual mock
+jest.mock('coralbricks-common');
 
 import { Response } from 'express';
 import { AxiosError } from 'axios';
@@ -29,6 +18,8 @@ import { QBUserDataRetriever } from '../../src/qbo/qbUserDataRetriever';
 import { enhancedLogger } from '../../src/utils/logger';
 
 // Get access to the mock
+const coralbricksCommonMock = jest.requireMock('coralbricks-common');
+const mockTaskService = coralbricksCommonMock.__mockTaskService;
 
 const MockedQBDataSchemaRetriever = QBDataSchemaRetriever as jest.MockedClass<typeof QBDataSchemaRetriever>;
 const MockedQBDataSizeRetriever = QBDataSizeRetriever as jest.MockedClass<typeof QBDataSizeRetriever>;
@@ -44,7 +35,20 @@ describe('TCWrapperBackend', () => {
     MockedQBDataSizeRetriever.mockClear();
     MockedQBUserDataRetriever.mockClear();
     
-
+    // Clear mock call counts, but not implementations
+    if (mockTaskService) {
+      mockTaskService.createTask.mockClear();
+      mockTaskService.updateTaskStatus.mockClear();
+    }
+    
+    // Reset mock implementations
+    if (mockTaskService && mockTaskService.createTask) {
+      mockTaskService.createTask.mockResolvedValue({
+        cbId: BigInt(456),
+        handleForModel: 'TestTable_abc123'
+      });
+      mockTaskService.updateTaskStatus.mockResolvedValue(undefined);
+    }
     
     mockQBOProfile = {
       cbId: BigInt(1),
@@ -123,16 +127,17 @@ describe('TCWrapperBackend', () => {
 
       const wrapper = new TCWrapperBackend(BigInt(123), mockQBOProfile);
       
-      const result = await wrapper.wrap(
+      await wrapper.run(
         'test-tool-call-id',
         { query: 'test' },
         'qb_data_size_retriever',
         QueryType.RETRIEVE,
         1,
+        mockResponse
       );
 
-      expect(result.status).toBe('error');
-      expect(result.error_type).toBe('Error');
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalled();
     });
   });
 
@@ -190,7 +195,7 @@ describe('TCWrapperBackend', () => {
       );
 
       expect(result.status).toBe('scheduled');
-      // TaskService.createTask should be called
+      expect(mockTaskService.createTask).toHaveBeenCalled();
     });
 
     it('should handle SCHEDULE query type with custom delay', async () => {
@@ -231,7 +236,7 @@ describe('TCWrapperBackend', () => {
       // Allow promises to resolve
       await new Promise(resolve => setImmediate(resolve));
 
-      // TaskService.updateTaskStatus should be called
+      expect(mockTaskService.updateTaskStatus).toHaveBeenCalledWith(BigInt(456), TaskStatus.COMPLETED);
       
       jest.useRealTimers();
     });

@@ -82,12 +82,13 @@ model Thread {
   cbId                    BigInt   @id @map("cb_id") @default(dbgenerated("nextval('global_non_user_seq')")) @db.BigInt
   ownerId                 BigInt   @map("owner_id") @db.BigInt
   createdAt               DateTime @default(now()) @map("created_at")
-  
+
   // Relations
   owner                   Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   pipelines               Pipeline[]
   messages                Message[]
-  
+  tasks                   Task[]
+
   @@map("threads")
 }
 
@@ -164,6 +165,9 @@ model Task {
   status                  String   @map("status") @db.Text
   blobPath                String   @map("blob_path") @db.Text
 
+  // Relations
+  thread                  Thread   @relation(fields: [threadId], references: [cbId], onDelete: Cascade, map: "fk_tasks_thread")
+  
   // Self-referencing relation for dependencies
   deps                    Task[]   @relation("TaskDependencies")
   dependents              Task[]   @relation("TaskDependencies")

@@ -1,4 +1,4 @@
-import { ToolCallWrapper, QueryType } from 'coralbricks-common';
+import { ToolCallWrapper, QueryType, ToolDescription, log } from 'coralbricks-common';
 import { IToolCall, ToolCallResult } from 'coralbricks-common';
 import { TaskService, TaskStatus } from 'coralbricks-common';
 import * as ts from 'typescript';
@@ -7,19 +7,126 @@ import { SupabaseStorageService } from 'coralbricks-common';
 
 
 export class TypeScriptExecutor implements IToolCall {
-  private modelHandleToBlobPath: Record<string, string>;
-  private supabaseStorageService: SupabaseStorageService;
-  private userData: Record<string, any[]> = {};
-  private baseContext: any = {}
   constructor(
     private typescriptCode: string, 
     private threadId: bigint,
     private toolCallId: string,
-    modelHandleToBlobPath: Record<string, string>,
+    private baseContext: any = {}
   ) {
-    this.modelHandleToBlobPath = modelHandleToBlobPath;
+  }
+
+  getModelHandleName(): string {
+    throw new Error('Not implemented');
+  }
+
+  getBlobPath(): string {
+    throw new Error('Not implemented');
+  }
+
+  async validate(): Promise<void> {
+    // Compile the TypeScript code to check for syntax errors
+    const result = ts.transpileModule(this.typescriptCode, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2020,
+        module: ts.ModuleKind.CommonJS,
+        strict: true,
+        esModuleInterop: true,
+        skipLibCheck: true,
+        forceConsistentCasingInFileNames: true,
+        resolveJsonModule: true,
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true
+      }
+    });
+
+    if (result.diagnostics && result.diagnostics.length > 0) {
+      const errors = result.diagnostics.map(diagnostic => {
+        const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+        return `${diagnostic.file?.fileName || 'unknown'}:${diagnostic.start}: ${message}`;
+      }).join('\n');
+      throw new Error(`TypeScript compilation failed:\n${errors}`);
+    }
+  }
+
+  async call_tool(): Promise<ToolCallResult> {
+    // First validate the code
+    await this.validate();
+
+    // await this.addUserData({});
+    
+    // Compile TypeScript to JavaScript using CommonJS for VM compatibility
+    const result = ts.transpileModule(this.typescriptCode, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2020,
+        module: ts.ModuleKind.CommonJS,
+        strict: true,
+        esModuleInterop: true,
+        skipLibCheck: true,
+        forceConsistentCasingInFileNames: true,
+        resolveJsonModule: true,
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true
+      }
+    });
+
+    const javascriptCode = result.outputText;
+    
+    // Execute the code which should run the function and return the result directly
+    const resultPromise = runInNewContext(javascriptCode, this.baseContext, {
+      timeout: 30000, // 30 second timeout
+      displayErrors: true
+    });
+
+    // If the result is a promise, await it
+    const output = resultPromise && typeof resultPromise.then === 'function' 
+      ? await resultPromise 
+      : resultPromise;
+
+    return ToolCallResult.success(
+      'typescript_executor',
+      { output, executed_code: this.typescriptCode },
+      this.toolCallId,
+      this.threadId
+    );
+  }
+
+  static tool_description(): ToolDescription {
+    return {
+      type: "function",
+      function: {
+        name: 'typescript_executor',
+        description: "Execute TypeScript code",
+        parameters: {
+          type: "object",
+          properties: {
+            typescript_code: {
+              type: "string",
+              description: "The TypeScript code to execute"
+            }
+          }
+        }
+      }
+    };
+  }
+}
+
+export class TCWrapperExecutor extends ToolCallWrapper {
+  private modelHandleToBlobPath: Record<string, string> = {}
+  private supabaseStorageService: SupabaseStorageService;
+  private userData: Record<string, any[]> = {};
+  private baseContext: any = {};
+  constructor(
+    thread_id: bigint,
+  ) {
+    super(thread_id);
+    
+    // pretty print the typescript code to the log with indents
     this.supabaseStorageService = new SupabaseStorageService();
-    this.prepareUserData();
+    this.baseContext = {
+      __userData: this.userData,
+    };
+    this.modelHandleToBlobPath = {};
+    this.userData = {};
     this.baseContext = {
       __userData: this.userData,
       console: {
@@ -38,6 +145,30 @@ export class TypeScriptExecutor implements IToolCall {
         platform: process.platform,
         arch: process.arch,
         version: process.version
+      },
+      // CommonJS globals needed for compiled TypeScript
+      exports: {},
+      module: { exports: {} },
+      require: (id: string) => {
+        // Basic require implementation for common modules
+        switch (id) {
+          case 'util':
+            return require('util');
+          case 'crypto':
+            return require('crypto');
+          case 'path':
+            return require('path');
+          case 'fs':
+            return require('fs');
+          case 'os':
+            return require('os');
+          case 'url':
+            return require('url');
+          case 'querystring':
+            return require('querystring');
+          default:
+            throw new Error(`Module '${id}' is not available in the sandbox environment`);
+        }
       },
       // Add any other global objects that might be needed
       Math,
@@ -77,143 +208,38 @@ export class TypeScriptExecutor implements IToolCall {
     };
   }
 
-  getBlobPath(): string {
-    throw new Error('Not implemented');
-  }
-
-  async prepareUserData(): Promise<void> {
+  async upsertUserData(): Promise<void> {
     for (const modelHandle of Object.keys(this.modelHandleToBlobPath)) {
+      if (this.userData[modelHandle]) {
+        continue;
+      }
       const blobPath = this.modelHandleToBlobPath[modelHandle] as string;
       const blob = await this.supabaseStorageService.tryCache(blobPath);
       this.userData[modelHandle] = blob || [];
+
+      log.info(`User data added for model handle: ${modelHandle} with ${this.userData[modelHandle].length} records`);
     }
+
+    this.baseContext.__userData = this.userData;
   }
 
-  async validate(): Promise<void> {
-    // Compile the TypeScript code to check for syntax errors
-    const result = ts.transpileModule(this.typescriptCode, {
-      compilerOptions: {
-        target: ts.ScriptTarget.ES2020,
-        module: ts.ModuleKind.CommonJS,
-        strict: true,
-        esModuleInterop: true,
-        skipLibCheck: true,
-        forceConsistentCasingInFileNames: true,
-        resolveJsonModule: true,
-        experimentalDecorators: true,
-        emitDecoratorMetadata: true
-      }
-    });
-
-    if (result.diagnostics && result.diagnostics.length > 0) {
-      const errors = result.diagnostics.map(diagnostic => {
-        const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-        return `${diagnostic.file?.fileName || 'unknown'}:${diagnostic.start}: ${message}`;
-      }).join('\n');
-      throw new Error(`TypeScript compilation failed:\n${errors}`);
-    }
-  }
-
-  async call_tool(): Promise<ToolCallResult> {
-    try {
-      // First validate the code
-      await this.validate();
-
-      // Compile TypeScript to JavaScript
-      const result = ts.transpileModule(this.typescriptCode, {
-        compilerOptions: {
-          target: ts.ScriptTarget.ES2020,
-          module: ts.ModuleKind.CommonJS,
-          strict: true,
-          esModuleInterop: true,
-          skipLibCheck: true,
-          forceConsistentCasingInFileNames: true,
-          resolveJsonModule: true,
-          experimentalDecorators: true,
-          emitDecoratorMetadata: true
-        }
-      });
-
-      const javascriptCode = result.outputText;
-      
-      // Execute the code
-      const output = runInNewContext(javascriptCode, this.baseContext, {
-        timeout: 30000, // 30 second timeout
-        displayErrors: true
-      });
-
-      return ToolCallResult.success(
-        'typescript_executor',
-        { output, executed_code: this.typescriptCode },
-        this.toolCallId,
-        this.threadId
-      );
-    } catch (error) {
-      return ToolCallResult.error(
-        'typescript_executor',
-        this.toolCallId,
-        this.threadId,
-        error instanceof Error ? error.constructor.name : 'UnknownError',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-    }
-  }
-
-  static tool_description(): ToolDescription {
-    return {
-      type: "function",
-      function: {
-        name: QBDataSchemaRetriever.tool_name(),
-        description: "Retrieve data schema from Quickbooks using Quickbooks HTTP platform API",
-        parameters: {
-          type: "object",
-          properties: {
-            table_name: {
-              type: "string",
-              description: "The name of the table to retrieve data schema for"
-            }
-          }
-        }
-      }
-    };
-  }
-}
-
-export class TCWrapperExecutor extends ToolCallWrapper {
-  private typescriptCode: string;
-  private modelHandleToBlobStorage: Record<string, string> = {}
-  constructor(
-    thread_id: bigint,
-    tool_call_id: string,
-    tool_name: string,
-    tool_args: any,
-    query_type_enum: QueryType,
-    scheduled_delay_ms: number = 1,
+  public async waitForDependencies(
     depends_on_task_ids: bigint[] = []
-  ) {
-    super(thread_id, tool_call_id, tool_name, tool_args, query_type_enum, scheduled_delay_ms, depends_on_task_ids);
-    
-    if (!tool_args.typescript_code) {
-      throw new Error('Missing required parameter: typescript_code');
-    }
-    
-    this.typescriptCode = tool_args.typescript_code;
-  }
-
-  protected async waitForDependencies(): Promise<void> {
-    if (this.dependsOnTaskIds.length === 0) {
+  ): Promise<void> {
+    if (depends_on_task_ids.length === 0) {
       return;
     }
-
+    
+    log.info(`Waiting for dependencies: ${JSON.stringify(depends_on_task_ids)}`);
     const taskService = TaskService.getInstance();
     
     // Wait for all dependent tasks to complete
     while (true) {
       const allCompleted = await Promise.all(
-        this.dependsOnTaskIds.map(async (taskId) => {
+        depends_on_task_ids.map(async (taskId) => {
           const task = await taskService.getTask(taskId);
           if (task && task.status === TaskStatus.COMPLETED) {
-            this.modelHandleToBlobStorage[task.handleForModel] = task.blobPath;
+            this.modelHandleToBlobPath[task.handleForModel] = task.blobPath;
             return true;
           }
           return false;
@@ -221,28 +247,33 @@ export class TCWrapperExecutor extends ToolCallWrapper {
       );
 
       if (allCompleted.every(completed => completed)) {
+        log.info(`All dependencies completed: ${JSON.stringify(depends_on_task_ids)}`);
         break;
+      } else {
+              // Wait 1 second before checking again
+        log.info(`Still waiting for dependencies - will wait for 1 second: ${JSON.stringify(depends_on_task_ids)}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-
-      // Wait 1 second before checking again
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
+    await this.upsertUserData();
   }
 
-  protected get_tool_instance(): IToolCall {
+  protected getToolInstance(
+    tool_call_id: string,
+    tool_name: string,
+    tool_args: any,
+  ): IToolCall {
+    if (!tool_args.typescript_code) {
+      throw new Error('Missing required parameter: typescript_code');
+    }
+
+    log.info(`Typescript code: ${tool_args.typescript_code.split('\n').map((line: string) => '  ' + line).join('\n')}`);
+    
     return new TypeScriptExecutor(
-        this.typescriptCode, 
+        tool_args.typescript_code, 
         this.threadId, 
-        this.toolCallId, 
-        this.modelHandleToBlobStorage
+        tool_call_id, 
+        this.baseContext
     );
-  }
-
-  async wrap(): Promise<ToolCallResult> {
-    // Wait for dependencies before proceeding
-    await this.waitForDependencies();
-
-    // Call the parent wrap method
-    return super.wrap();
   }
 } 

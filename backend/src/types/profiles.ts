@@ -307,12 +307,11 @@ export enum RemotePlatform {
     /**
      * Check if a token needs refreshing and refresh if necessary
      */
-    async getValidAccessTokenWithRefresh(): Promise<string> {
-        log.info(`Getting valid access token with refresh for realm: ${this.realmId}`);
-        
+    async getValidAccessTokenWithRefresh(): Promise<string> {        
         if (this.expiresIn && this.updatedAt) {
             const expirationTime = new Date(this.updatedAt.getTime() + this.expiresIn * 1000);
             if (new Date() < expirationTime) {
+                log.info(`Got valid access token with refresh for realm: ${this.realmId}, expirationTime: ${expirationTime}`);
                 return this.accessToken as string;
             }
         }

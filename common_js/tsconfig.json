@@ -4,6 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020", "ES2021"],
     "declaration": true,
+    "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
     "strict": true,

@@ -130,27 +130,22 @@ router.post('/:toolName', async (req: Request, res: Response) => {
     // Create wrapper and execute/validate the tool
     const wrapper = new TCWrapperBackend(
       thread_id, 
-      tool_call_id, 
-      toolName, 
-      toolArgs, 
       qboProfile, 
-      query_type_enum
     );
     
-    
-    await wrapper.run(res);
+    await wrapper.run(tool_call_id, toolArgs, toolName, query_type_enum, 1, res);
     const duration = Date.now() - startTime;
     
     log.info(`[TOOL] Completed ${toolName}`, {
       requestId,
       toolName,
       duration: `${duration}ms`,
-      status: 'success'
     });
     return;
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const stackTrace = error instanceof Error ? error.stack : undefined;
     const action = query_type === 'validate' ? 'validating' : 'executing';
     
     log.error(`[TOOL] Error ${action} tool ${toolName}`, {
@@ -159,7 +154,7 @@ router.post('/:toolName', async (req: Request, res: Response) => {
       action,
       error: errorMessage,
       body: req.body,
-      stack: error instanceof Error ? error.stack : undefined
+      stack: stackTrace
     });
     
     res.status(500).json({
