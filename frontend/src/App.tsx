@@ -45,10 +45,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       return [
         {
           cbId: 'leads-pipeline-1',
-          name: 'Lead Scoring Pipeline',
+          name: 'Daily lead scoring',
           createdAt: '2025-09-01T09:00:00Z',
           parentThread: { cbId: 'demo-leads' },
           status: 'Delayed'
+        },
+        {
+          cbId: 'leads-pipeline-2',
+          name: 'Daily export to Apollo',
+          createdAt: '2025-09-02T08:00:00Z',
+          parentThread: { cbId: 'demo-leads' },
+          status: 'Running'
         }
       ];
     } else if (location.pathname.startsWith('/demo/campaigns')) {

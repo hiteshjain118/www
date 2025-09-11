@@ -189,31 +189,6 @@ const Threads: React.FC<ThreadsProps> = ({
                 /* Demo Threads - only show demo threads when on demo page */
                 <>
                   <div
-                    onClick={() => handleDemoThreadClick('campaigns')}
-                    className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
-                      selectedThreadId === 'demo-campaigns'
-                        ? 'bg-blue-100 border border-blue-200'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-900 truncate">
-                          Campaign CAC Analysis
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Aug 14
-                        </p>
-                      </div>
-                      {selectedThreadId === 'demo-campaigns' && (
-                        <div className="ml-2 flex-shrink-0">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div
                     onClick={() => handleDemoThreadClick('leads')}
                     className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                       selectedThreadId === 'demo-leads'
@@ -239,6 +214,31 @@ const Threads: React.FC<ThreadsProps> = ({
                   </div>
                   
                   <div
+                    onClick={() => handleDemoThreadClick('campaigns')}
+                    className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
+                      selectedThreadId === 'demo-campaigns'
+                        ? 'bg-blue-100 border border-blue-200'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          Campaign CAC Analysis
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Aug 15
+                        </p>
+                      </div>
+                      {selectedThreadId === 'demo-campaigns' && (
+                        <div className="ml-2 flex-shrink-0">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div
                     onClick={() => handleDemoThreadClick('revenue')}
                     className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
                       selectedThreadId === 'demo-revenue'
@@ -252,7 +252,7 @@ const Threads: React.FC<ThreadsProps> = ({
                           June revenue analysis
                         </p>
                         <p className="text-xs text-gray-500">
-                          Aug 15
+                          Aug 14
                         </p>
                       </div>
                       {selectedThreadId === 'demo-revenue' && (
