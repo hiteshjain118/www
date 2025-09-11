@@ -7,13 +7,15 @@ interface ThreadsProps {
   selectedThreadId?: string;
   onThreadSelect?: (threadId: string) => void;
   onThreadCreate?: (threadId: string) => void;
+  showDemoThread?: boolean;
 }
 
 const Threads: React.FC<ThreadsProps> = ({ 
   userCbid,
   selectedThreadId,
   onThreadSelect, 
-  onThreadCreate
+  onThreadCreate,
+  showDemoThread = false
 }) => {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +87,11 @@ const Threads: React.FC<ThreadsProps> = ({
     }
   };
 
+  const handleDemoThreadClick = (demoType: string) => {
+    // Navigate to demo route using window.location to trigger route change
+    window.location.href = `/demo/${demoType}`;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -104,7 +111,7 @@ const Threads: React.FC<ThreadsProps> = ({
       <div className="p-4 border-b border-gray-200 bg-white">
         <button
           onClick={handleCreateThread}
-          disabled={creating}
+          disabled={creating || showDemoThread}
           className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
         >
           {creating ? (
@@ -114,6 +121,13 @@ const Threads: React.FC<ThreadsProps> = ({
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               Creating...
+            </>
+          ) : showDemoThread ? (
+            <>
+              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.465 8.465M9.878 9.878A3 3 0 1015.12 15.12M2.458 12C3.732 7.943 7.523 5 12 5c.847 0 1.669.105 2.458.298m4.084 8.276L21.54 8.46" />
+              </svg>
+              Demo Mode
             </>
           ) : (
             <>
@@ -166,33 +180,114 @@ const Threads: React.FC<ThreadsProps> = ({
             </div>
           ) : (
             <div className="py-2">
-              {threads.map((thread) => (
-                <div
-                  key={thread.cbId}
-                  onClick={() => handleThreadClick(thread.cbId)}
-                  className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
-                    selectedThreadId === thread.cbId
-                      ? 'bg-blue-100 border border-blue-200'
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-900 truncate">
-                        Thread {thread.cbId.slice(-6)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatDate(thread.createdAt)}
-                      </p>
-                    </div>
-                    {selectedThreadId === thread.cbId && (
-                      <div className="ml-2 flex-shrink-0">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            {showDemoThread ? (
+                /* Demo Threads - only show demo threads when on demo page */
+                <>
+                  <div
+                    onClick={() => handleDemoThreadClick('campaigns')}
+                    className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
+                      selectedThreadId === 'demo-campaigns'
+                        ? 'bg-blue-100 border border-blue-200'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          Campaign CAC Analysis
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Aug 14
+                        </p>
                       </div>
-                    )}
+                      {selectedThreadId === 'demo-campaigns' && (
+                        <div className="ml-2 flex-shrink-0">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                  
+                  <div
+                    onClick={() => handleDemoThreadClick('leads')}
+                    className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
+                      selectedThreadId === 'demo-leads'
+                        ? 'bg-blue-100 border border-blue-200'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          Qualified Leads
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Sep 1
+                        </p>
+                      </div>
+                      {selectedThreadId === 'demo-leads' && (
+                        <div className="ml-2 flex-shrink-0">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div
+                    onClick={() => handleDemoThreadClick('revenue')}
+                    className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
+                      selectedThreadId === 'demo-revenue'
+                        ? 'bg-blue-100 border border-blue-200'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          June revenue analysis
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Aug 15
+                        </p>
+                      </div>
+                      {selectedThreadId === 'demo-revenue' && (
+                        <div className="ml-2 flex-shrink-0">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Regular Threads - only show when not on demo page */
+                threads.map((thread) => (
+                  <div
+                    key={thread.cbId}
+                    onClick={() => handleThreadClick(thread.cbId)}
+                    className={`mx-2 mb-1 p-2 rounded-md cursor-pointer transition-colors duration-150 ${
+                      selectedThreadId === thread.cbId
+                        ? 'bg-blue-100 border border-blue-200'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          Thread {thread.cbId.slice(-6)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatDate(thread.createdAt)}
+                        </p>
+                      </div>
+                      {selectedThreadId === thread.cbId && (
+                        <div className="ml-2 flex-shrink-0">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

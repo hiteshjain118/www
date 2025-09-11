@@ -377,7 +377,7 @@ const Thread: React.FC = () => {
   return (
     <div className="flex-1 flex min-h-0">
       {/* Chat Panel */}
-      <div className="w-3/5 bg-white flex flex-col border-r border-gray-200 min-h-0">
+      <div className="w-full bg-white flex flex-col min-h-0">
         {/* Chat Header */}
         <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -520,30 +520,6 @@ const Thread: React.FC = () => {
               <span>Please wait for the AI to respond before sending another message.</span>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Right Panel - Agent Preview */}
-      <div className="w-2/5 bg-white flex flex-col min-h-0">
-        {/* Preview Header */}
-        <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-              <SparklesIcon className="w-3 h-3 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 text-sm">Agent Preview</h3>
-              <p className="text-xs text-gray-500">Your agent will appear here as you build it</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Preview Content - Fixed, no scrolling */}
-        <div className="flex-1 p-4 flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <SparklesIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">Start describing your agent to see the preview</p>
-          </div>
         </div>
       </div>
     </div>

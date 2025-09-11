@@ -1,12 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Navigation: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Check if we're on a demo page or thread page
+  const isDemoPage = location.pathname.startsWith('/demo');
+  const isThreadPage = location.pathname.startsWith('/thread') || location.pathname === '/create';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -63,7 +68,7 @@ const Navigation: React.FC = () => {
               className="h-8 w-auto"
             />
             <span className="ml-2 text-xl font-semibold text-gray-900">
-              Profile
+              {isDemoPage ? 'Demo' : isThreadPage ? '' : 'Profile'}
             </span>
           </div>
 
