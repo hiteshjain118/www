@@ -58,22 +58,24 @@ const Navigation: React.FC = () => {
 
   return (
     <nav className="bg-white shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center">
+      <div className="flex items-center h-16">
+        {/* Logo - Far Left */}
+        <div className="flex items-center pl-4">
             <img
               src="/logo.png"
               alt="Coral Bricks"
               className="h-8 w-auto"
             />
             <span className="ml-2 text-xl font-semibold text-gray-900">
-              {isDemoPage ? 'Demo' : isThreadPage ? '' : 'Profile'}
+              {isDemoPage ? 'Demo' : isThreadPage ? '' : 'Imports'}
             </span>
           </div>
 
-          {/* User Menu */}
-          <div className="relative" ref={dropdownRef}>
+        {/* Spacer */}
+        <div className="flex-1"></div>
+
+        {/* User Menu - Far Right */}
+        <div className="relative pr-4" ref={dropdownRef}>
             <button
               onClick={toggleDropdown}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md px-3 py-2"
@@ -108,14 +110,9 @@ const Navigation: React.FC = () => {
                   onClick={handleProfileClick}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
                 >
-                  Profile
+                  Imports
                 </button>
-                <button
-                  onClick={handleCreateClick}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
-                >
-                  Create Agent
-                </button>
+
                 <button
                   onClick={handleDebugClick}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
@@ -133,8 +130,7 @@ const Navigation: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
   );
 };
 
