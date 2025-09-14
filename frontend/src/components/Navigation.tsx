@@ -48,13 +48,24 @@ const Navigation: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
+  const handleAgentsClick = () => {
+    navigate('/agents');
+    setIsDropdownOpen(false);
+  };
+
+  const handlePrivacyClick = () => {
+    navigate('/privacy-policy');
+    setIsDropdownOpen(false);
+  };
+
+  const handleTermsClick = () => {
+    navigate('/terms-of-service');
+    setIsDropdownOpen(false);
+  };
+
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
-
-  if (!user) {
-    return null; // Don't show navigation for unauthenticated users
-  }
 
   return (
     <nav className="bg-white shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
@@ -75,7 +86,8 @@ const Navigation: React.FC = () => {
         <div className="flex-1"></div>
 
         {/* User Menu - Far Right */}
-        <div className="relative pr-4" ref={dropdownRef}>
+        {user ? (
+          <div className="relative pr-4" ref={dropdownRef}>
             <button
               onClick={toggleDropdown}
               className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md px-3 py-2"
@@ -119,6 +131,30 @@ const Navigation: React.FC = () => {
                 >
                   Debug Tools
                 </button>
+                
+                <div className="border-t border-gray-200 my-1"></div>
+                
+                <button
+                  onClick={handleAgentsClick}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                >
+                  Agents
+                </button>
+                
+                <button
+                  onClick={handlePrivacyClick}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                >
+                  Privacy Policy
+                </button>
+                
+                <button
+                  onClick={handleTermsClick}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                >
+                  Terms of Service
+                </button>
+                
                 <div className="border-t border-gray-200 my-1"></div>
                 <button
                   onClick={handleSignOut}
@@ -129,6 +165,35 @@ const Navigation: React.FC = () => {
               </div>
             )}
           </div>
+        ) : (
+          // Public navigation menu for unauthenticated users
+          <div className="flex items-center space-x-4 pr-4">
+            <button
+              onClick={handleAgentsClick}
+              className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+            >
+              Agents
+            </button>
+            <button
+              onClick={handlePrivacyClick}
+              className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+            >
+              Privacy
+            </button>
+            <button
+              onClick={handleTermsClick}
+              className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+            >
+              Terms
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="bg-coral-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-coral-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
+            >
+              Login
+            </button>
+          </div>
+        )}
         </div>
       </nav>
   );

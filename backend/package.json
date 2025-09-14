@@ -6,9 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "start:internal": "ts-node-dev --respawn --transpile-only src/start-servers.ts --internal-only",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "dev:internal": "ts-node-dev --respawn --transpile-only src/start-servers.ts --internal-only",
     "frontend": "vite",
     "frontend:build": "vite build",
     "test": "jest",

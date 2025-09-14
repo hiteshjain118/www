@@ -13,6 +13,9 @@ import DemoCampaigns from './pages/DemoCampaigns';
 import DemoLaunchPromo from './pages/DemoLaunchPromo';
 import DashboardMetricsNotebook from './pages/DashboardMetricsNotebook';
 import UserChurnNotebook from './pages/UserChurnNotebook';
+import Agents from './pages/Agents';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import RightSidebar from './components/RightSidebar';
 import InternalDebugger from './components/InternalDebugger';
 import { useAuth } from './contexts/AuthContext';
@@ -217,6 +220,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
+// Public layout component for pages that don't require authentication
+const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-coral-50 to-brick-50 pt-16">
+      <div className="flex-1">
+        {children}
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -227,6 +241,30 @@ function App() {
             <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
+            <Route 
+              path="/agents" 
+              element={
+                <PublicLayout>
+                  <Agents />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/privacy-policy" 
+              element={
+                <PublicLayout>
+                  <PrivacyPolicy />
+                </PublicLayout>
+              } 
+            />
+            <Route 
+              path="/terms-of-service" 
+              element={
+                <PublicLayout>
+                  <TermsOfService />
+                </PublicLayout>
+              } 
+            />
             <Route 
               path="/profile" 
               element={
