@@ -5,19 +5,31 @@
   "private": true,
 
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:chat\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "build": "npm run build:backend && npm run build:frontend",
+    "dev:chat": "cd chat_js && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:chat",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
+    "build:chat": "cd chat_js && npm run build",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:chat\"",
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm run preview",
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "start:chat": "cd chat_js && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../chat_js && npm install && cd ../common_js && npm install",
+    "vercel-build": "npm run install:all && npm run build",
     "db:generate": "cd backend && npm run db:generate",
     "db:push": "cd backend && npm run db:push",
     "db:migrate": "cd backend && npm run db:migrate",
-    "db:studio": "cd backend && npm run db:studio"
+    "db:studio": "cd backend && npm run db:studio",
+    "lint": "npm run lint:backend && npm run lint:frontend && npm run lint:chat",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:chat": "cd chat_js && npm run test",
+    "type-check": "npm run type-check:backend && npm run type-check:chat",
+    "type-check:backend": "cd backend && npx tsc --noEmit",
+    "type-check:chat": "cd chat_js && npm run type-check"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
