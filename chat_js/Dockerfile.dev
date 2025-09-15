@@ -1,0 +1,45 @@
+# Development Dockerfile for chat_js using ts-node
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy common_js first and build it
+COPY common_js ./common_js
+WORKDIR /app/common_js
+RUN npm ci && npm run build
+
+# Switch to chat_js directory
+WORKDIR /app/chat_js
+
+# Copy chat_js package files
+COPY chat_js/package*.json ./
+
+# Install all dependencies (including dev dependencies for ts-node)
+RUN npm ci
+
+# Copy chat_js source code
+COPY chat_js .
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# Change ownership of the app directory (including common_js)
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port (default for chat_js service)
+EXPOSE 3004
+
+# Health check - using the /api/status endpoint
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3004/api/status', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Start the application using ts-node (development mode)
+CMD ["npm", "start"] 

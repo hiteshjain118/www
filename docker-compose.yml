@@ -1,48 +1,75 @@
 version: '3.8'
 
 services:
-  auth-service:
-    build: .
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: coralbricks-backend
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=development
       - PORT=3001
-      - JWT_SECRET=dev-secret-key-change-in-production
-      - JWT_EXPIRES_IN=24h
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - QBO_CLIENT_ID=${QBO_CLIENT_ID}
       - QBO_CLIENT_SECRET=${QBO_CLIENT_SECRET}
-      - QBO_AUTH_URL=https://appcenter.intuit.com/connect/oauth2
-      - QBO_REDIRECT_URI=http://localhost:3001/auth/quickbooks/callback
-      - CORS_ORIGIN=http://localhost:3001
-      - LOG_LEVEL=debug
+      - QBO_AUTH_URL=${QBO_AUTH_URL:-https://appcenter.intuit.com/connect/oauth2}
+      - QBO_REDIRECT_URI=${QBO_REDIRECT_URI:-http://localhost:3001/auth/quickbooks/callback}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3001}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
       - LOG_FILE=logs/auth-service.log
     volumes:
-      - ./logs:/app/logs
-      - ./.env:/app/.env
+      - ./backend/logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - coralbricks-network
 
-  # Optional: Add a database service if needed
-  # postgres:
-  #   image: postgres:15-alpine
-  #   environment:
-  #     - POSTGRES_DB=coralbricks_auth
-  #     - POSTGRES_USER=auth_user
-  #     - POSTGRES_PASSWORD=auth_password
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
+  chat-js:
+    build:
+      context: .
+      dockerfile: chat_js/${CHAT_JS_DOCKERFILE:-Dockerfile}
+    container_name: coralbricks-chat
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - LOG_FILE=logs/chat-service.log
+    volumes:
+      - ./chat_js/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3004/api/status', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - coralbricks-network
+    depends_on:
+      backend:
+        condition: service_healthy
 
+networks:
+  coralbricks-network:
+    driver: bridge
+
+# Optional: Add volumes for persistent data
 # volumes:
-#   postgres_data: 
+#   backend_logs:
+#   chat_logs: 

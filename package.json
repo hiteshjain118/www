@@ -1,7 +1,7 @@
 {
-  "name": "coralbricks-auth-monorepo",
+  "name": "coralbricks",
   "version": "1.0.0",
-  "description": "Monorepo for CoralBricks authentication service",
+  "description": "Monorepo for CoralBricks",
   "private": true,
 
   "scripts": {
@@ -29,7 +29,21 @@
     "lint:chat": "cd chat_js && npm run test",
     "type-check": "npm run type-check:backend && npm run type-check:chat",
     "type-check:backend": "cd backend && npx tsc --noEmit",
-    "type-check:chat": "cd chat_js && npm run type-check"
+    "type-check:chat": "cd chat_js && npm run type-check",
+    "docker:build:backend": "cd backend && docker build -t coralbricks-backend .",
+    "docker:build:chat": "cd chat_js && docker build -t coralbricks-chat .",
+    "docker:build:chat:dev": "cd chat_js && docker build -f Dockerfile.dev -t coralbricks-chat:dev .",
+    "docker:run:backend": "docker run -p 3001:3001 --env-file backend/.env coralbricks-backend",
+    "docker:run:chat": "docker run -p 3004:3004 --env-file chat_js/.env coralbricks-chat",
+    "docker:run:chat:dev": "docker run -p 3004:3004 --env-file chat_js/.env coralbricks-chat:dev",
+    "docker:compose:build": "docker-compose build",
+    "docker:compose:up": "docker-compose up",
+    "docker:compose:up:detached": "docker-compose up -d",
+    "docker:compose:up:dev": "CHAT_JS_DOCKERFILE=Dockerfile.dev docker-compose up",
+    "docker:compose:down": "docker-compose down",
+    "docker:compose:logs": "docker-compose logs -f",
+    "docker:compose:restart": "docker-compose restart",
+    "docker:validate": "./scripts/validate-docker.sh"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
