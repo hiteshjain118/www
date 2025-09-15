@@ -18,6 +18,9 @@ COPY chat_js/package*.json ./
 # Install all dependencies (including dev dependencies for ts-node)
 RUN npm ci
 
+# Fix the symlink for coralbricks-common to point to the correct path
+RUN rm -f node_modules/coralbricks-common && ln -s ../../common_js node_modules/coralbricks-common
+
 # Copy chat_js source code
 COPY chat_js .
 
