@@ -3,8 +3,13 @@ import { enhancedLogger as log } from '../utils/logger';
 import { CBUser, QBProfile } from '../types/profiles';
 import { QueryType } from 'coralbricks-common';
 import { TOOL_REGISTRY, TCWrapperBackend } from '../services/tcWrapperBackend';
+import { AuthMiddleware } from '../middleware/auth';
 
 const router = Router();
+const authMiddleware = new AuthMiddleware();
+
+// Apply standard authentication to all tools routes
+router.use(authMiddleware.requireCoralBricksAuth);
 
 /**
  * GET /

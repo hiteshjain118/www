@@ -175,7 +175,7 @@ export class ToolCallRunner {
       return this.enabledToolDescriptions;
     }
     
-    const response = await axios.get(`${this.internalApiUrl}/tools`, {
+    const response = await axios.get(`${this.internalApiUrl}/tools?cbid=${this.cbProfileId}`, {
       headers: {
         'X-Internal-Service': 'chat_js'
       },

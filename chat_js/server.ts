@@ -1,8 +1,8 @@
 // Load environment variables from .env file
 import 'dotenv/config';
 
-// Initialize custom logger with line numbers
-import './logger';
+// Import the common logger
+import { log } from 'coralbricks-common';
 
 import express from 'express';
 import http from 'http';
@@ -66,14 +66,14 @@ wss.on('connection', (ws, req) => {
     return;
   }
   
-  console.log(`Client connected: ${userId} for thread: ${threadId}`);
+  log.info(`Client connected: ${userId} for thread: ${threadId}`);
   
   // Create or get existing session for this thread
   let session = sessions.get(threadId);
   if (!session) {
     session = new Session(BigInt(threadId), BigInt(userId), new Date(), ws);
     sessions.set(threadId, session);
-    console.log(`Created new session for thread: ${threadId}`);
+    log.info(`Created new session for thread: ${threadId}`);
   } else {
     console.log(`Using existing session for thread: ${threadId}`);
   }
@@ -118,7 +118,7 @@ wss.on('connection', (ws, req) => {
         return;
       }
       
-      console.log(`Received from ${userId} in thread ${threadId}:`, message);
+      log.info(`Received from ${userId} in thread ${threadId}:`, message);
       session.handleUserMessage(message.body || message.message || JSON.stringify(message));
     } catch (error) {
       console.error('Error parsing message:', error);
@@ -202,17 +202,17 @@ app.get('/api/clients', (req, res) => {
 
 // Start server
 server.listen(config.port, () => {
-  console.log(`Chat server running on port ${config.port}`);
-  console.log(`WebSocket server ready for connections`);
-  console.log(`HTTP API available at http://localhost:${config.port}/api`);
-  console.log(`Environment: ${config.nodeEnv}`);
-  console.log(`TypeScript modules loaded successfully`);
-  console.log(`Custom logger initialized with line numbers`);
+  log.info(`Chat server running on port ${config.port}`);
+  log.info(`WebSocket server ready for connections`);
+  log.info(`HTTP API available at http://localhost:${config.port}/api`);
+  log.info(`Environment: ${config.nodeEnv}`);
+  log.info(`TypeScript modules loaded successfully`);
+  log.info(`Common logger initialized with Pacific timezone`);
   
   if (config.isDevelopment) {
-    console.log(`CORS Origins: ${config.corsOrigin}`);
-    console.log(`Intent Server: ${config.intentServerEnabled ? 'Enabled' : 'Disabled'}`);
-    console.log(`Default Intent: ${config.defaultIntent}`);
+    log.info(`CORS Origins: ${config.corsOrigin}`);
+    log.info(`Intent Server: ${config.intentServerEnabled ? 'Enabled' : 'Disabled'}`);
+    log.info(`Default Intent: ${config.defaultIntent}`);
   }
 });
 

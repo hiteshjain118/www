@@ -32,12 +32,14 @@ const Thread: React.FC = () => {
   const [canSendMessage, setCanSendMessage] = useState(true);
   const [currentThread, setCurrentThread] = useState<ThreadType | null>(null);
   const [wsConnectionStatus, setWsConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  const [hasNewConnection, setHasNewConnection] = useState(false);
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  // Check if user can send a message (only after assistant messages)
-  const checkCanSendMessage = (messages: Message[]): boolean => {
+  // Check if user can send a message (after assistant messages OR on new connections)
+  const checkCanSendMessage = (messages: Message[], hasNewConnection: boolean): boolean => {
     if (messages.length === 0) return true; // Allow first message
+    if (hasNewConnection) return true; // Allow message on new WebSocket connections
     const lastMessage = messages[messages.length - 1];
     return lastMessage.sender === 'ai'; // Can only send after AI messages
   };
@@ -62,10 +64,10 @@ const Thread: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Update canSendMessage state when messages change
+  // Update canSendMessage state when messages change or connection status changes
   useEffect(() => {
-    setCanSendMessage(checkCanSendMessage(messages));
-  }, [messages]);
+    setCanSendMessage(checkCanSendMessage(messages, hasNewConnection));
+  }, [messages, hasNewConnection]);
 
 
 
@@ -89,6 +91,7 @@ const Thread: React.FC = () => {
         onConnect: () => {
           console.log('WebSocket connected successfully');
           setWsConnectionStatus('connected');
+          setHasNewConnection(true); // Enable sending on new connection
         },
         onDisconnect: () => {
           console.log('WebSocket disconnected');
@@ -260,6 +263,7 @@ const Thread: React.FC = () => {
     setMessages((prev: Message[]) => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
+    setHasNewConnection(false); // Reset new connection flag after sending message
 
     try {
       // Save user message to database

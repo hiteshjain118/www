@@ -12,7 +12,7 @@ import rateLimit from 'express-rate-limit';
 import { config, validateConfig } from './config';
 import { enhancedLogger as log } from './utils/logger';
 import { AuthMiddleware } from './middleware/auth';
-import { startInternalServer } from './internal-server';
+// import { startInternalServer } from './internal-server'; // No longer needed - consolidated into main server
 
 // Import routes
 import coralbricksAuthRoutes from './routes/coralbricksAuth';
@@ -21,6 +21,9 @@ import coralbricksProfileRoutes from './routes/coralbricksProfile';
 import quickbooksProfileRoutes from './routes/quickbooksProfile';
 import threadsRoutes from './routes/threads';
 import pipelinesRoutes from './routes/pipelines';
+// Import internal tools routes (previously on separate server)
+import toolsRoutes from './routes/tools';
+import internToolsRoutes from './routes/internTools';
 
 // Create Express app
 const app = express();
@@ -167,6 +170,11 @@ app.get('/', (req, res) => {
         'GET /quickbooks/profile/companies?cbid=<id>': 'Get list of connected QuickBooks companies',
         'GET /quickbooks/profile/status/<realm_id>?cbid=<id>': 'Check QuickBooks company connection status',
         'GET /quickbooks/profile/user?cbid=<id>': 'Get QuickBooks user information'
+      },
+      internal_tools: {
+        'GET /tools': 'Get available tool descriptions for LLM integration',
+        'POST /tools/:toolName': 'Execute QuickBooks tools',
+        'GET /intern/message/model_events?messageId=<id>': 'Get model events for debugging'
       }
     },
     usage_example: 'All endpoints require cbid parameter: ?cbid=123'
@@ -180,6 +188,10 @@ app.use('/profile', coralbricksProfileRoutes);
 app.use('/quickbooks/profile', quickbooksProfileRoutes);
 app.use('/', threadsRoutes);
 app.use('/', pipelinesRoutes);
+
+// Register internal tools routes (consolidated from internal server)
+app.use('/', toolsRoutes);  // Tools router already defines '/tools' path
+app.use('/intern', internToolsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -233,12 +245,14 @@ async function startServer() {
       log.warn('Warning: Using default JWT secret. Change JWT_SECRET in production.');
     }
 
-    // Start main API server on port 3000
+    // Start main API server (now includes internal tools)
     const mainServer = app.listen(config.port, () => {
       log.info(`🚀 CoralBricks Authentication Service started on port ${config.port}`);
       log.info(`📖 API Documentation: http://localhost:${config.port}/`);
       log.info(`🏥 Health Check: http://localhost:${config.port}/health`);
       log.info(`📊 Status: http://localhost:${config.port}/status`);
+      log.info(`🛠️  Internal Tools API: http://localhost:${config.port}/tools`);
+      log.info(`🔧 Internal Debug API: http://localhost:${config.port}/intern`);
       log.info(`🔐 Note: All endpoints use cbid parameter for authentication`);
       
       if (config.nodeEnv === 'development') {
@@ -247,12 +261,8 @@ async function startServer() {
       }
     });
 
-    // Start internal tools server on port 3001
-    const internalServer = await startInternalServer();
-
-    // Store server references for graceful shutdown
+    // Store server reference for graceful shutdown
     (global as any).mainServer = mainServer;
-    (global as any).internalServer = internalServer;
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

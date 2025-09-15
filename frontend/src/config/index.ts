@@ -7,7 +7,7 @@ export interface Config {
 
 // Load environment variables or use defaults
 export const config: Config = {
-  backendApiUrl: (import.meta as any).env?.VITE_BACKEND_API_URL || 'http://localhost:3000',
+  backendApiUrl: (import.meta as any).env?.VITE_BACKEND_API_URL || 'http://localhost:3010',
   chatWebSocketUrl: (import.meta as any).env?.VITE_CHAT_WEBSOCKET_URL || 'ws://localhost:3004',
   environment: (import.meta as any).env?.VITE_NODE_ENV || 'development',
 };

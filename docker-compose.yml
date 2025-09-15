@@ -6,21 +6,10 @@ services:
     container_name: coralbricks-backend
     ports:
       - "3010:3010"
+    env_file:
+      - backend/.env
     environment:
-      - NODE_ENV=development
       - PORT=3010
-      - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-production}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - QBO_CLIENT_ID=${QBO_CLIENT_ID}
-      - QBO_CLIENT_SECRET=${QBO_CLIENT_SECRET}
-      - QBO_AUTH_URL=${QBO_AUTH_URL:-https://appcenter.intuit.com/connect/oauth2}
-      - QBO_REDIRECT_URI=${QBO_REDIRECT_URI:-http://localhost:3010/auth/quickbooks/callback}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3010}
-      - LOG_LEVEL=${LOG_LEVEL:-debug}
-      - LOG_FILE=logs/auth-service.log
     volumes:
       - ./backend/logs:/app/logs
     restart: unless-stopped
@@ -40,14 +29,8 @@ services:
     container_name: coralbricks-chat
     ports:
       - "3004:3004"
-    environment:
-      - NODE_ENV=development
-      - PORT=3004
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - LOG_LEVEL=${LOG_LEVEL:-debug}
-      - LOG_FILE=logs/chat-service.log
+    env_file:
+      - chat_js/.env
     volumes:
       - ./chat_js/logs:/app/logs
     restart: unless-stopped

@@ -1,5 +1,8 @@
 # Development Dockerfile for chat_js using ts-node
-FROM node:18-alpine
+FROM node:20-alpine
+
+# Install OpenSSL and other dependencies for Prisma compatibility
+RUN apk add --no-cache openssl openssl-dev libc6-compat
 
 # Set working directory
 WORKDIR /app
@@ -7,7 +10,7 @@ WORKDIR /app
 # Copy common_js first and build it
 COPY common_js ./common_js
 WORKDIR /app/common_js
-RUN npm ci && npm run build
+RUN npm ci && npm run build && npx prisma generate
 
 # Switch to chat_js directory
 WORKDIR /app/chat_js
@@ -20,6 +23,13 @@ RUN npm ci
 
 # Fix the symlink for coralbricks-common to point to the correct path
 RUN rm -f node_modules/coralbricks-common && ln -s ../../common_js node_modules/coralbricks-common
+
+# Regenerate Prisma client for the correct environment
+WORKDIR /app/common_js
+RUN npx prisma generate
+
+# Switch back to chat_js directory
+WORKDIR /app/chat_js
 
 # Copy chat_js source code
 COPY chat_js .
