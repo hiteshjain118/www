@@ -2,7 +2,7 @@
 
 import { ChatCompletionMessage, ChatCompletionMessageCustomToolCall, ChatCompletionMessageToolCall } from "openai/resources/chat/completions";
 import { ToolCallRunner } from "../tool-call-runner";
-import { log, ToolCallResult } from 'coralbricks-common';
+import { ToolCallResult } from 'coralbricks-common';
 
 
 export interface IModelPrompt {
@@ -48,10 +48,12 @@ export class ModelOutputParser {
   private error: string | undefined;
   private toolCallResults: Record<string, ToolCallResult> = {};
   private toolCallRunner: ToolCallRunner;
+  private logger: any;
   constructor(
     toolCallRunner: ToolCallRunner
   ) {
     this.toolCallRunner = toolCallRunner;
+    this.logger = this.toolCallRunner.logger;
   }
 
   remove_json_header_if_present(content: string): string {
@@ -72,7 +74,7 @@ export class ModelOutputParser {
     if (message.tool_calls && message.tool_calls.length > 0) {
       this.toolCalls = message.tool_calls as ChatCompletionMessageToolCall[] | ChatCompletionMessageCustomToolCall[];
     } 
-    log.info(`gpt call success content: ${this.responseContent} tool_calls: ${this.toolCalls.length}`);
+    this.logger.info(`gpt call success content: ${this.responseContent} tool_calls: ${this.toolCalls.length}`);
     return this;
   }
 

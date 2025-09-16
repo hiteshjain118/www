@@ -184,9 +184,9 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex pt-16">
+    <div className="h-screen bg-gradient-to-br from-coral-50 to-brick-50 flex pt-16 overflow-hidden">
       {/* Left Panel - Threads Sidebar */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 h-full">
         <Sidebar 
           userCbid={user.cbid}
           selectedThreadId={selectedThreadId}
@@ -200,8 +200,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        <div className="flex-1">
+      <div className="flex-1 flex min-h-0 h-full">
+        <div className="flex-1 h-full">
           {children}
         </div>
         

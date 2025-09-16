@@ -9,9 +9,12 @@ const Navigation: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Check if we're on a demo page or thread page
+  // Check if we're on a demo page, thread page, or public pages
   const isDemoPage = location.pathname.startsWith('/demo');
   const isThreadPage = location.pathname.startsWith('/thread') || location.pathname === '/create';
+  const isPublicPage = location.pathname.startsWith('/agents') || 
+                      location.pathname.startsWith('/privacy-policy') || 
+                      location.pathname.startsWith('/terms-of-service');
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -78,7 +81,7 @@ const Navigation: React.FC = () => {
               className="h-8 w-auto"
             />
             <span className="ml-2 text-xl font-semibold text-gray-900">
-              {isDemoPage ? 'Demo' : isThreadPage ? '' : 'Imports'}
+              {isDemoPage ? 'Demo' : isThreadPage ? '' : isPublicPage ? 'Coral Bricks AI' : 'Imports'}
             </span>
           </div>
 

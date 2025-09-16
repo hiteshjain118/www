@@ -379,9 +379,9 @@ const Thread: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex min-h-0">
+    <div className="flex-1 flex min-h-0 h-full">
       {/* Chat Panel */}
-      <div className="w-full bg-white flex flex-col min-h-0">
+      <div className="w-full bg-white flex flex-col min-h-0 h-full">
         {/* Chat Header */}
         <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
           <div className="flex items-center justify-between">

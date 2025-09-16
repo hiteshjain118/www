@@ -3,6 +3,7 @@ import { ChatSlotName, ChatIntentName, SenderType } from './enums';
 import { ChatMemory } from './memory';
 import { ChatMessage } from './implementations';
 import { ModelIO } from './modelio';
+import { contextLogger } from 'coralbricks-common';
 
 export interface AssistantToUserMessageSender {
   handleAssistantMessage: (
@@ -15,6 +16,7 @@ export interface AssistantToUserMessageSender {
 }
 
 export class IntentServerInput {
+  public logger: any;
   constructor(
     public threadId: bigint,
     public userId: bigint,
@@ -22,7 +24,9 @@ export class IntentServerInput {
     public chatMemory: ChatMemory,
     public session: AssistantToUserMessageSender,
     public modelIO: ModelIO,
-  ) {}
+  ) {
+    this.logger = contextLogger(threadId, userId);
+  }
   toString(): string {
     return `IntentServerInput(threadId: ${this.threadId}, userId: ${this.userId}, userTurn: ${this.userTurn}, chatMemory: ${this.chatMemory})`;
   }
@@ -59,7 +63,7 @@ export abstract class IIntentServer {
   }
 
   async serve(input: IntentServerInput): Promise<void> {
-    console.log(`Serving intent: ${this.myIntent} with input: ${input}`);
+    input.logger.info(`Serving intent: ${this.myIntent} with input: ${input}`);
     this.updateSlots(input.userTurn.slots || {} as Record<ChatSlotName, any>);
     
     const { canContinue, missingSlots } = this.canContinueWithRequest();

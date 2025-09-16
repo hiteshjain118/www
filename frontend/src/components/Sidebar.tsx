@@ -31,7 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     window.location.href = `/demo/${dashboardType}`;
   };
   return (
-    <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col h-full">
+    <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col h-full overflow-hidden">
       {/* Threads section */}
       <div className="flex-shrink-0">
         <Threads

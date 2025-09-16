@@ -36,8 +36,11 @@ COPY --from=builder /app/common_js ./common_js
 # Copy chat_js package files
 COPY chat_js/package*.json ./
 
-# Install only production dependencies
-RUN npm ci --omit=dev
+# Install production dependencies and keep TypeScript for runtime
+RUN npm ci --omit=dev && npm install typescript ts-node
+
+# Create symlink for coralbricks-common
+RUN rm -f node_modules/coralbricks-common && ln -s ../common_js node_modules/coralbricks-common
 
 # Copy built application from builder stage
 COPY --from=builder /app/chat_js/dist ./dist

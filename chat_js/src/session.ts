@@ -8,6 +8,7 @@ import { ModelIO } from "./types/modelio";
 import { ToolCallRunner } from "./tool-call-runner";
 import { QBServerSuccessPrompt } from "./qb-server-success-prompt";
 import { QBServer } from "./qb-server";
+import { log, contextLogger } from 'coralbricks-common';
 
 class Session implements AssistantToUserMessageSender {
   private threadId: bigint;
@@ -17,7 +18,7 @@ class Session implements AssistantToUserMessageSender {
   // have history in DB
   public modelIO: ModelIO;
   private memory: ChatMemory;
-  
+  private logger: any;
   constructor(threadId: bigint, userId: bigint, createdAt: Date, ws: WebSocket) {
     this.threadId = threadId;
     this.userId = userId;
@@ -25,6 +26,7 @@ class Session implements AssistantToUserMessageSender {
     this.createdAt = createdAt;
     this.ws = ws;
     this.modelIO = QBServer.create_model_io(this.threadId, this.userId);
+    this.logger = contextLogger(this.threadId, this.userId);
   }
   
   getMemory(): ChatMemory {
@@ -53,7 +55,7 @@ class Session implements AssistantToUserMessageSender {
     );
     const assistant_to_user_message_cbId = await this.memory.addMessage(assistantTurn);
       
-    console.log(`Sending assistant message to user ${this.userId} in thread ${this.threadId}: ${assistantTurn.body} with cbId: ${assistant_to_user_message_cbId}`);
+    this.logger.info(`Sending assistant message to user ${this.userId}: ${assistantTurn.body} with cbId: ${assistant_to_user_message_cbId}`);
     this.ws.send(JSON.stringify({
       type: 'chat',
       userId: this.userId.toString(),
@@ -66,7 +68,7 @@ class Session implements AssistantToUserMessageSender {
   
   async handleUserMessage(message: string) {
     // Send delivery receipt to client
-    console.log(`Sending delivery receipt to client for thread ${this.threadId}...`);
+    this.logger.info(`Sending delivery receipt to client...`);
     this.ws.send(JSON.stringify({
       type: 'message_received',
       userId: this.userId.toString(),
@@ -78,7 +80,7 @@ class Session implements AssistantToUserMessageSender {
     // Handle message processing in background
     setImmediate(async () => {
       // try {
-      console.log(`Scheduled to handle user message for thread ${this.threadId}...`);
+      this.logger.info(`Scheduled to handle user message...`);
       await this.sendUserMessageToIntentServer(message);
     });
   }
@@ -95,7 +97,7 @@ class Session implements AssistantToUserMessageSender {
       if (!intentServer) {
         throw new Error(`Intent server for ${detectedIntent} not found`);
       } else {
-        console.log(`got here intentServer: ${intentServer.get_cbId()}, ${INTENT_REGISTRY.getAllIntents()}`);
+        this.logger.info(`got here intentServer: ${intentServer.get_cbId()}, ${INTENT_REGISTRY.getAllIntents()}`);
       }
       
       // write message to db and get messageId = cbId
@@ -124,12 +126,12 @@ class Session implements AssistantToUserMessageSender {
         this.modelIO
       );
       
-      console.log(`Input data: ${inputData}, calling intent server: ${ChatIntentName.QB}, ${INTENT_REGISTRY.getAllIntents()}`);
+      this.logger.info(`Input data: ${inputData}, calling intent server: ${ChatIntentName.QB}, ${INTENT_REGISTRY.getAllIntents()}`);
       
       await intentServer.serve(inputData);
     } catch (error) {
       // print more info about error
-      console.error('Error handling chat message:', error instanceof Error ? error.stack : error, INTENT_REGISTRY.getAllIntents());
+      this.logger.error('Error handling chat message:', error instanceof Error ? error.stack : error, INTENT_REGISTRY.getAllIntents());
     }
   }
 }

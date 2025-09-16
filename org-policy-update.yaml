@@ -1,0 +1,5 @@
+constraint: constraints/iam.allowedPolicyMemberDomains
+listPolicy:
+  allowedValues:
+  - C02j94kpx  # coralbricks.ai domain
+  - allUsers   # Allow public access for specific services

@@ -2,7 +2,10 @@ import { IModelPrompt, TMessage } from './types/modelio';
 import { ToolCallResult } from 'coralbricks-common'; 
 
 export class QBServerPrompt implements IModelPrompt {
-
+  public logger: any;
+  constructor(logger: any) {
+    this.logger = logger;
+  }
   get_json_conversation_after_system_prompt(): string {
     return ""
   }

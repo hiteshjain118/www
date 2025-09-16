@@ -101,11 +101,11 @@ const logger = winston.createLogger({
       format: winston.format.combine(
         lineNumberFormat(),
         pacificTimestamp(),
-        winston.format.printf(({ timestamp, level, message, service, file, ...meta }: any) => {
+        winston.format.printf(({ timestamp, level, message, service, file, threadId, cbid, ...meta }: any) => {
           const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
           const fileInfo = file ? ` [${file}]` : '';
-          const serviceInfo = service ? ` [${service}]` : '';
-          return `[${timestamp}]${serviceInfo} [${level.toUpperCase()}]${fileInfo} ${message} ${metaStr}`;
+          const contextInfo = (threadId || cbid) ? ` [${threadId || ''}${threadId && cbid ? ',' : ''}${cbid || ''}]` : '';
+          return `[${timestamp}] [${level.toUpperCase()}]${fileInfo}${contextInfo} ${message} ${metaStr}`;
         }),
         winston.format.colorize({ all: true })
       )
@@ -175,6 +175,50 @@ export const enhancedLogger = {
     return logger.debug(message, meta);
   }
 };
+
+// Enhanced logger factory with context support (threadId, cbid)
+export const contextLogger = (threadId?: string | bigint, cbid?: string | bigint) => ({
+  info: (message: string, meta?: any) => {
+    const callSite = getCallSite();
+    const logMeta = { 
+      ...meta, 
+      file: callSite,
+      threadId: threadId?.toString(),
+      cbid: cbid?.toString()
+    };
+    return logger.info(message, logMeta);
+  },
+  error: (message: string, meta?: any) => {
+    const callSite = getCallSite();
+    const logMeta = { 
+      ...meta, 
+      file: callSite,
+      threadId: threadId?.toString(),
+      cbid: cbid?.toString()
+    };
+    return logger.error(message, logMeta);
+  },
+  warn: (message: string, meta?: any) => {
+    const callSite = getCallSite();
+    const logMeta = { 
+      ...meta, 
+      file: callSite,
+      threadId: threadId?.toString(),
+      cbid: cbid?.toString()
+    };
+    return logger.warn(message, logMeta);
+  },
+  debug: (message: string, meta?: any) => {
+    const callSite = getCallSite();
+    const logMeta = { 
+      ...meta, 
+      file: callSite,
+      threadId: threadId?.toString(),
+      cbid: cbid?.toString()
+    };
+    return logger.debug(message, logMeta);
+  }
+});
 
 // Export enhancedLogger as log for convenience and backward compatibility
 export const log = enhancedLogger; 

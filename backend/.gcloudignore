@@ -1,0 +1,35 @@
+# Git files
+.git
+.gitignore
+
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Environment files (will be handled via Cloud Run env vars)
+.env
+
+# Test files
+tests/
+**/*.test.ts
+**/*.test.js
+
+# Development files
+src/
+tsconfig.json
+tsconfig.node.json
+
+# Temporary files
+temp_*
+*.backup
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,42 @@
+steps:
+  # Build the backend container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'backend/Dockerfile',
+      '-t', 'gcr.io/$PROJECT_ID/coralbricks-backend:$BUILD_ID',
+      '-t', 'gcr.io/$PROJECT_ID/coralbricks-backend:latest',
+      '.'
+    ]
+    
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/coralbricks-backend:$BUILD_ID']
+    
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/coralbricks-backend:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'coralbricks-backend'
+      - '--image=gcr.io/$PROJECT_ID/coralbricks-backend:$BUILD_ID'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=3010'
+      - '--memory=1Gi'
+      - '--cpu=1'
+      - '--max-instances=10'
+      - '--set-env-vars=PORT=3010,NODE_ENV=production'
+
+images:
+  - 'gcr.io/$PROJECT_ID/coralbricks-backend:$BUILD_ID'
+  - 'gcr.io/$PROJECT_ID/coralbricks-backend:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'

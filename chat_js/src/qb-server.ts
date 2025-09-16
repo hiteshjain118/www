@@ -11,7 +11,7 @@ import { GPTProvider } from './gpt-provider';
 import { ChatCompletionMessage } from 'openai/resources/chat/completions';
 import { ToolCallRunner } from './tool-call-runner';
 import { ChatMessage } from "./types/implementations";
-import { PrismaService, ToolCallResult } from 'coralbricks-common';
+import { PrismaService, ToolCallResult, contextLogger } from 'coralbricks-common';
 import { AssistantStream } from 'openai/lib/AssistantStream';
 
 export class QBServer extends IIntentServer {
@@ -25,7 +25,7 @@ export class QBServer extends IIntentServer {
 
   static create_model_io(threadId: bigint, userId: bigint): ModelIO {
     return new ModelIO(
-      new QBServerSuccessPrompt(),
+      new QBServerSuccessPrompt(contextLogger(threadId, userId)),
       new ToolCallRunner(threadId, userId),
       ChatIntentName.QB
     );
@@ -44,12 +44,12 @@ export class QBServer extends IIntentServer {
 
   // Abstract method implementations with correct signatures
   async runTools(input: IntentServerInput): Promise<any> {
-    console.log(`Running tools for ${this.myIntent}: ${input.userId}`);
+    input.logger.info(`Running tools for ${this.myIntent}: ${input.userId}`);
     return {};
   }
 
   async useToolOutput(toolsOutput: any, input: IntentServerInput): Promise<void> {
-    console.log(`Using tool output: ${toolsOutput}`);
+    input.logger.info(`Using tool output: ${toolsOutput}`);
     
     // Convert IChatMessage[] to TMessage[]
     const convertToTMessage = (chatMessages: any[]): TMessage[] => {
@@ -68,7 +68,7 @@ export class QBServer extends IIntentServer {
     input.modelIO.prompt.add_user_turn(userTurn);
 
     // Log initial conversation state
-    console.log("Initial conversation state:");
+    input.logger.info("Initial conversation state:");
     input.modelIO.prompt.pretty_print_conversation();
     
     let output = await this.run_model_once(input);
@@ -77,18 +77,18 @@ export class QBServer extends IIntentServer {
       output = await this.run_model_once(input);
       
       // Log conversation state after each iteration
-      console.log(`Conversation state after iteration:`);
+      input.logger.info(`Conversation state after iteration:`);
       input.modelIO.prompt.pretty_print_conversation();
     }    
   }
 
   async handleMissingSlots(missingSlots: ChatSlotName[], input: IntentServerInput): Promise<void> {
-    console.log(`Handling missing slots:`, missingSlots);  
+    input.logger.info(`Handling missing slots:`, missingSlots);  
   }
 
   // Legacy methods for backward compatibility - remove if not needed
   async run_tools(input: any): Promise<any> {
-    console.log(`Legacy run_tools called for ${this.myIntent}`);
+    input.contextLogger.info(`Legacy run_tools called for ${this.myIntent}`);
     return {};
   }
   
@@ -119,7 +119,7 @@ export class QBServer extends IIntentServer {
       });
       return model_event.cbId;
     } catch (error) {
-      console.error('Failed to save model event:', error);
+      input.logger.error('Failed to save model event:', error);
       // Don't throw error to avoid breaking the main flow
       return null;
     }
@@ -144,7 +144,7 @@ export class QBServer extends IIntentServer {
         ChatIntentName.QB,
         {} as Record<ChatSlotName, any>
       );
-      console.log(`Assistant to user message cbId: ${assistant_to_user_message_cbId}`);
+      input.logger.info(`Assistant to user message cbId: ${assistant_to_user_message_cbId}`);
     }
     const model_event_id = await this.saveModelEvent(input, output, assistant_to_user_message_cbId || null);
     
@@ -152,7 +152,7 @@ export class QBServer extends IIntentServer {
     if (output.message) {
       input.modelIO.prompt.add_chat_completion_message(output.message);
     } else {
-      console.warn('Model response did not include a message');
+      input.logger.warn('Model response did not include a message');
     }
    
     // prepare for the next intent server to model message by 

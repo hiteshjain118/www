@@ -12,8 +12,8 @@ export class QBServerSuccessPrompt extends QBServerPrompt {
     name?: string;
   }>;
 
-  constructor() {
-    super();
+  constructor(logger: any) {
+    super(logger);
     const timestamp_int = Math.floor(Date.now() / 1000);
     this.conversation_file_name = `conversation_${timestamp_int}.jsonl`;
     this.messages = [
@@ -31,7 +31,7 @@ export class QBServerSuccessPrompt extends QBServerPrompt {
         .join('\n') + '\n';
       fs.appendFileSync(this.conversation_file_name, logContent);
     } catch (error) {
-      console.error('Error writing to conversation log:', error);
+      this.logger.error('Error writing to conversation log:', error);
     }
   }
 
@@ -72,12 +72,12 @@ export class QBServerSuccessPrompt extends QBServerPrompt {
 
   add_chat_completion_message(message: any): void {
     if (!message) {
-      console.warn('Attempted to add null/undefined message to conversation');
+      this.logger.warn('Attempted to add null/undefined message to conversation');
       return;
     }
     
     if (!message.role) {
-      console.warn('Attempted to add message without role property:', message);
+      this.logger.warn('Attempted to add message without role property:', message);
       return;
     }
     
@@ -86,19 +86,20 @@ export class QBServerSuccessPrompt extends QBServerPrompt {
   }
 
   pretty_print_conversation(): void {
-    console.log('='.repeat(80));
-    console.log('CONVERSATION HISTORY');
-    console.log('='.repeat(80));
+    
+    this.logger.info('='.repeat(80));
+    this.logger.info('CONVERSATION HISTORY');
+    this.logger.info('='.repeat(80));
     
     let message_count = 0;
     for (const message of this.messages) {
       if (!message) {
-        console.warn('Found null/undefined message in conversation history');
+        this.logger.warn('Found null/undefined message in conversation history');
         continue;
       }
       
       if (!message.role) {
-        console.warn('Found message without role property:', message);
+        this.logger.warn('Found message without role property:', message);
         continue;
       }
       
@@ -110,23 +111,23 @@ export class QBServerSuccessPrompt extends QBServerPrompt {
       
       // Handle different message types
       if (message.role === 'user') {
-        console.log(`[${message_count}] USER: ${message.content}`);
+        this.logger.info(`[${message_count}] USER: ${message.content}`);
       } else if (message.role === 'assistant') {
-        console.log(`[${message_count}] ASSISTANT: ${message.content}`);
+        this.logger.info(`[${message_count}] ASSISTANT: ${message.content}`);
       } else if (message.role === 'tool') {
         const tool_call_id = message.tool_call_id || 'unknown';
         const tool_name = message.name || 'unknown';
         const content = message.content.length > 100 
           ? `${message.content.substring(0, 100)}...${message.content.length}`
           : message.content;
-        console.log(`[${message_count}] TOOL CALL RESULT (ID: ${tool_call_id}, Tool: ${tool_name}): ${content}`);
+        this.logger.info(`[${message_count}] TOOL CALL RESULT (ID: ${tool_call_id}, Tool: ${tool_name}): ${content}`);
       }
       
-      console.log(''); // Empty line between messages
+      this.logger.info(''); // Empty line between messages
     }
     
-    console.log('='.repeat(80));
-    console.log(`Total Messages (excluding system): ${message_count}`);
-    console.log('='.repeat(80));
+    this.logger.info('='.repeat(80));
+    this.logger.info(`Total Messages (excluding system): ${message_count}`);
+    this.logger.info('='.repeat(80));
   }
 } 

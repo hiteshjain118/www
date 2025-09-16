@@ -2,6 +2,7 @@ import { QBServer } from "../qb-server";
 import { ChatIntentName } from "./enums";
 import { GPTProvider } from "../gpt-provider";
 import { IIntentServer } from "./intent-server";
+import { log } from 'coralbricks-common';
 
 export class IntentRegistry {
   private intentsToHandlers: Map<ChatIntentName, IIntentServer>;
@@ -13,14 +14,14 @@ export class IntentRegistry {
   }
 
   register(intent: ChatIntentName, server: IIntentServer): void {
-    console.log(`registering intent: ${intent}, ${server.get_cbId()}`);
+    log.info(`registering intent: ${intent}, ${server.get_cbId()}`);
     this.intentsToHandlers.set(intent, server);
   }
 
   server(intent: ChatIntentName): IIntentServer | undefined {
     // Ensure registry is initialized before serving
     this.ensureInitialized();
-    console.log(`getting server for intent: ${intent}, ${this.intentsToHandlers.get(intent)?.get_cbId()}`);
+    log.info(`getting server for intent: ${intent}, ${this.intentsToHandlers.get(intent)?.get_cbId()}`);
     return this.intentsToHandlers.get(intent);
   }
 
@@ -55,7 +56,7 @@ export class IntentRegistry {
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     if (OPENAI_API_KEY) {
       this.register(ChatIntentName.QB, new QBServer(new GPTProvider(OPENAI_API_KEY)));
-      console.log('Successfully registered QB intent server in Node.js environment');
+      log.info('Successfully registered QB intent server in Node.js environment');
     } else {
       throw new Error('OPENAI_API_KEY is not set');
     }

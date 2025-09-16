@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { log } from '../utils/logger';
+import { config } from '../config';
 
 interface ModelEvent {
   id: number;
@@ -162,7 +163,7 @@ const InternalDebugger: React.FC = () => {
   // Get messageId from URL query parameter
   const messageId = searchParams.get('messageId') || '';
 
-  const API_BASE_URL = 'http://localhost:3001'; // Internal server port
+  const API_BASE_URL = config.backendApiUrl; // Use configured backend URL
 
   const fetchModelEvents = async (id: string) => {
     if (!id.trim()) {

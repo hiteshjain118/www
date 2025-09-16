@@ -1,7 +1,7 @@
 import { 
   ToolCallResult,
   QueryType,
-  log,
+  contextLogger,
 } from 'coralbricks-common';
 import { ChatCompletionMessageCustomToolCall, ChatCompletionMessageToolCall } from 'openai/resources/chat/completions';
 import axios from 'axios';
@@ -27,7 +27,7 @@ export class ToolCallRunner {
   }>;
   private retrievalTasksScheduled: bigint[] = [];
   private tcWrapperExecutor: TCWrapperExecutor;
-
+  public logger: any;
   constructor(thread_id: bigint, cb_profile_id: bigint) {
     this.threadId = thread_id;
     this.cbProfileId = cb_profile_id;
@@ -35,6 +35,7 @@ export class ToolCallRunner {
     this.enabledTools = [];
     this.enabledToolDescriptions = [];
     this.tcWrapperExecutor = new TCWrapperExecutor(this.threadId);
+    this.logger = contextLogger(this.threadId, this.cbProfileId);
   }
 
   async run_tools(toolCalls: ChatCompletionMessageToolCall[] | ChatCompletionMessageCustomToolCall[]): Promise<Record<string, ToolCallResult>> {
@@ -99,10 +100,10 @@ export class ToolCallRunner {
       );
       const error_message = error instanceof Error ? error.message : String(error);
       const stack_trace = error instanceof Error ? error.stack || error.message : String(error);
-      log.error(`Tool ${tool_call_id} failed with error ${error_message} stack ${stack_trace}`);
+      this.logger.error(`Tool ${tool_call_id} failed with error ${error_message} stack ${stack_trace}`);
     }
     const duration_ms = Date.now() - start_time;
-    log.info(`Tool ID:${tool_call_id} name:${tool_name} took ${duration_ms}ms`);
+    this.logger.info(`Tool ID:${tool_call_id} name:${tool_name} took ${duration_ms}ms`);
     
     return result;
   }
@@ -124,7 +125,7 @@ export class ToolCallRunner {
         ...tool_arguments
       };
 
-      log.info(`Running tool call id:${tool_call_id} name:${tool_name} with arguments ${JSON.stringify(tool_arguments)} for thread ${this.threadId}`);
+      this.logger.info(`Running tool call id:${tool_call_id} name:${tool_name} with arguments ${JSON.stringify(tool_arguments)} for thread ${this.threadId}`);
       
       const response = await axios.post(`${this.internalApiUrl}/${tool_name}`, requestBody, {
         headers: {
@@ -133,11 +134,11 @@ export class ToolCallRunner {
         },
         timeout: 30000 // 30 second timeout
       }).then((response) => {
-        log.info(`Tool call ${tool_name} returned response ${`status: ${response.status}, data: ${JSON.stringify(response.data)}`}`);
+        this.logger.info(`Tool call ${tool_name} returned response ${`status: ${response.status}, data: ${JSON.stringify(response.data)}`}`);
         return ToolCallResult.from_api_response(response.data);
       }).catch((error) => {
         const error_response = error.response;
-        log.error(`Tool call ${tool_name} returned error ${`status: ${error_response.status}, data: ${JSON.stringify(error_response.data)}`}`);
+        this.logger.error(`Tool call ${tool_name} returned error ${`status: ${error_response.status}, data: ${JSON.stringify(error_response.data)}`}`);
         return ToolCallResult.from_api_response(error_response.data);
       });
       return response;

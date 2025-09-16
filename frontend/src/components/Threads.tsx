@@ -111,9 +111,9 @@ const Threads: React.FC<ThreadsProps> = ({
   };
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-white">
+      <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
         <button
           onClick={handleCreateThread}
           disabled={creating || showDemoThread}
@@ -146,14 +146,14 @@ const Threads: React.FC<ThreadsProps> = ({
       </div>
 
       {/* Threads Section */}
-      <div>
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Threads Header */}
-        <div className="px-4 py-2 border-b border-gray-200 bg-gray-100">
+        <div className="px-4 py-2 border-b border-gray-200 bg-gray-100 flex-shrink-0">
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Threads</h3>
         </div>
 
-        {/* Threads List - Fixed height with scroll */}
-        <div className="h-64 overflow-y-auto">
+        {/* Threads List - Flexible height with scroll */}
+        <div className="flex-1 overflow-y-auto min-h-0">
           {loading ? (
             <div className="p-4 text-center text-gray-500">
               <svg className="animate-spin mx-auto h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
@@ -297,7 +297,7 @@ const Threads: React.FC<ThreadsProps> = ({
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
