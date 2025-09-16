@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Thread from './pages/Thread';
 import Pipeline from './pages/Pipeline';
+import Main from './pages/Main';
 import DemoRevenue from './pages/DemoRevenue';
 import DemoLeads from './pages/DemoLeads';
 import DemoCampaigns from './pages/DemoCampaigns';
@@ -126,6 +127,9 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       const pipelineId = location.pathname.split('/pipeline/')[1];
       setSelectedPipelineId(pipelineId);
       setShowDemoThread(false);
+    } else if (location.pathname === '/main') {
+      setSelectedThreadId(undefined);
+      setShowDemoThread(false);
     } else {
       setSelectedThreadId(undefined);
       setShowDemoThread(false);
@@ -241,6 +245,14 @@ function App() {
             <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
+            <Route 
+              path="/main" 
+              element={
+                <MainLayout>
+                  <Main />
+                </MainLayout>
+              } 
+            />
             <Route 
               path="/agents" 
               element={

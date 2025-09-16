@@ -28,10 +28,10 @@ const Login: React.FC = () => {
   const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to profile if user is already logged in
+  // Redirect to main if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate('/profile');
+      navigate('/main');
     }
   }, [user, navigate]);
 
@@ -48,7 +48,7 @@ const Login: React.FC = () => {
           setError(error.message);
         } else {
           setSuccess('Signed in successfully!');
-          setTimeout(() => navigate('/profile'), 1000);
+          setTimeout(() => navigate('/main'), 1000);
         }
       } else if (mode === 'signup') {
         if (!firstName.trim() || !lastName.trim()) {

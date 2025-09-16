@@ -382,35 +382,6 @@ const Thread: React.FC = () => {
     <div className="flex-1 flex min-h-0 h-full">
       {/* Chat Panel */}
       <div className="w-full bg-white flex flex-col min-h-0 h-full">
-        {/* Chat Header */}
-        <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-coral-600 to-brick-600 rounded-full flex items-center justify-center">
-                <ChatBubbleLeftRightIcon className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">AI Agent Builder</h2>
-                <p className="text-sm text-gray-500">
-                  {currentThread && currentThread.cbId ? `Thread ${currentThread.cbId.toString().slice(-6)}` : 'New conversation'}
-                </p>
-              </div>
-            </div>
-            
-            {/* Connection Status */}
-            <div className="flex items-center space-x-2">
-              {getConnectionStatusIcon()}
-              <span className={`text-sm ${
-                wsConnectionStatus === 'connected' ? 'text-green-600' :
-                wsConnectionStatus === 'connecting' ? 'text-yellow-600' :
-                wsConnectionStatus === 'error' ? 'text-red-600' :
-                'text-gray-500'
-              }`}>
-                {getConnectionStatusText()}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Thread Loading Spinner */}
         {isThreadLoading && (

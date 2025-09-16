@@ -9,9 +9,10 @@ const Navigation: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Check if we're on a demo page, thread page, or public pages
+  // Check if we're on a demo page, thread page, main page, or public pages
   const isDemoPage = location.pathname.startsWith('/demo');
   const isThreadPage = location.pathname.startsWith('/thread') || location.pathname === '/create';
+  const isMainPage = location.pathname === '/main';
   const isPublicPage = location.pathname.startsWith('/agents') || 
                       location.pathname.startsWith('/privacy-policy') || 
                       location.pathname.startsWith('/terms-of-service');
@@ -51,6 +52,14 @@ const Navigation: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
+  const handleLogoClick = () => {
+    if (user) {
+      navigate('/main');
+    } else {
+      navigate('/login');
+    }
+  };
+
   const handleAgentsClick = () => {
     navigate('/agents');
     setIsDropdownOpen(false);
@@ -74,14 +83,14 @@ const Navigation: React.FC = () => {
     <nav className="bg-white shadow-md border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
       <div className="flex items-center h-16">
         {/* Logo - Far Left */}
-        <div className="flex items-center pl-4">
+        <div className="flex items-center pl-4 cursor-pointer" onClick={handleLogoClick}>
             <img
               src="/logo.png"
               alt="Coral Bricks"
               className="h-8 w-auto"
             />
             <span className="ml-2 text-xl font-semibold text-gray-900">
-              {isDemoPage ? 'Demo' : isThreadPage ? '' : isPublicPage ? 'Coral Bricks AI' : 'Imports'}
+              {isDemoPage ? 'Demo' : isThreadPage ? '' : isMainPage ? '' : isPublicPage ? 'Coral Bricks AI' : 'Imports'}
             </span>
           </div>
 
