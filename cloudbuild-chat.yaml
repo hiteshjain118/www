@@ -1,0 +1,52 @@
+steps:
+  # Build the chat_js container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'chat_js/Dockerfile',
+      '-t', 'gcr.io/$PROJECT_ID/coralbricks-chat:$BUILD_ID',
+      '-t', 'gcr.io/$PROJECT_ID/coralbricks-chat:latest',
+      '.'
+    ]
+    
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/coralbricks-chat:$BUILD_ID']
+    
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/coralbricks-chat:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'coralbricks-chat'
+      - '--image=gcr.io/$PROJECT_ID/coralbricks-chat:$BUILD_ID'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=3004'
+      - '--memory=2Gi'
+      - '--cpu=1'
+      - '--max-instances=10'
+      - '--set-env-vars=PORT=3004,NODE_ENV=production'
+      - '--set-env-vars=INTERNAL_API_URL=${_BACKEND_URL}'
+      - '--set-env-vars=CORS_ORIGIN=${_FRONTEND_URL}'
+      - '--set-env-vars=WS_HOST=0.0.0.0,WS_PORT=3004'
+      - '--set-env-vars=INTENT_SERVER_ENABLED=true,DEFAULT_INTENT=qb'
+      - '--set-env-vars=RATE_LIMIT_ENABLED=true,MAX_CONNECTIONS_PER_IP=10'
+
+images:
+  - 'gcr.io/$PROJECT_ID/coralbricks-chat:$BUILD_ID'
+  - 'gcr.io/$PROJECT_ID/coralbricks-chat:latest'
+
+# Substitution variables
+substitutions:
+  _BACKEND_URL: 'https://coralbricks-backend-REPLACE_WITH_HASH-uc.a.run.app'
+  _FRONTEND_URL: 'https://your-frontend-domain.com'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'

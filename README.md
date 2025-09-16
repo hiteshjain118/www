@@ -1,22 +1,43 @@
-# CoralBricks Authentication & QuickBooks Integration
+# Coral Bricks
 
-A full-stack TypeScript application providing authentication services and QuickBooks integration with threads functionality.
+An AI-powered business automation platform that integrates with QuickBooks and other business tools to create intelligent workflows.
+
+## 🚀 Quick Start
+
+```bash
+# 1. Deploy to Google Cloud (requires setup)
+./deploy.sh
+
+# 2. Local development setup
+cd docs && open setup.md
+```
+
+## 📚 Documentation
+
+All documentation is organized in the [`docs/`](docs/) directory:
+
+- **[Setup Guide](docs/setup.md)** - Installation and environment setup
+- **[Deployment Guide](docs/deployment.md)** - Deploy to Google Cloud
+- **[Backend Service](docs/backend.md)** - Backend API documentation
+- **[Chat Service](docs/chat.md)** - WebSocket and AI chat service
+- **[Database & Models](docs/database.md)** - Prisma and database setup
+- **[Testing](docs/testing.md)** - Test structure and execution
+- **[All Documentation](docs/README.md)** - Complete documentation index
 
 ## 🏗️ Architecture
 
-### Frontend
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Animations**: Framer Motion
-- **Icons**: Heroicons
-- **Port**: 3002
+```
+Frontend (React) ←→ Chat Service (WebSocket) ←→ Backend (REST API)
+                           ↓
+                    QuickBooks & AI Tools
+```
 
-### Backend
-- **Framework**: Express.js with TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Supabase integration
-- **Port**: 3001
+### Services
+
+- **Frontend**: React app with TypeScript, Tailwind CSS (Port: 3001)
+- **Backend**: Express.js API with Prisma ORM (Port: 3010)  
+- **Chat Service**: WebSocket server with AI integration (Port: 3004)
+- **Database**: PostgreSQL with Supabase hosting
 
 ## 🚀 Features
 

@@ -1,0 +1,66 @@
+# Deployment Configuration for Coral Bricks Services
+# This file contains configuration for deploying services to Google Cloud
+
+project:
+  id: "${GOOGLE_CLOUD_PROJECT}"
+  region: "us-central1"
+
+services:
+  backend:
+    name: "coralbricks-backend"
+    port: 3010
+    memory: "1Gi"
+    cpu: 1
+    max_instances: 10
+    cloudbuild_config: "backend/cloudbuild.yaml"
+    deploy_script: "backend/deploy.sh"
+    
+  chat:
+    name: "coralbricks-chat"
+    port: 3004
+    memory: "2Gi"
+    cpu: 1
+    max_instances: 10
+    cloudbuild_config: "chat_js/cloudbuild.yaml"
+    deploy_script: "chat_js/deploy.sh"
+    depends_on: ["backend"]
+
+deployment:
+  # Unified deployment script
+  deploy_all: "scripts/deploy-all.sh"
+  # Wrapper for convenience
+  deploy_wrapper: "deploy.sh"
+  # Frontend configuration update
+  update_frontend: "scripts/update-frontend-urls.sh"
+
+  frontend:
+    name: "coralbricks-frontend"
+    # Frontend typically deployed to Firebase Hosting or similar
+    # Configuration depends on your frontend deployment strategy
+
+environment:
+  production:
+    backend_url: "https://coralbricks-backend-HASH-uc.a.run.app"
+    chat_url: "https://coralbricks-chat-HASH-uc.a.run.app"
+    frontend_url: "https://your-frontend-domain.com"
+    cors_origins:
+      - "https://your-frontend-domain.com"
+      - "https://your-staging-domain.com"
+  
+  staging:
+    backend_url: "https://coralbricks-backend-staging-HASH-uc.a.run.app"
+    chat_url: "https://coralbricks-chat-staging-HASH-uc.a.run.app"
+    frontend_url: "https://staging.your-frontend-domain.com"
+    cors_origins:
+      - "https://staging.your-frontend-domain.com"
+
+secrets:
+  # These should be stored in Google Secret Manager
+  required:
+    - "OPENAI_API_KEY"
+    - "QBO_CLIENT_ID"
+    - "QBO_CLIENT_SECRET"
+    - "DATABASE_URL"
+    - "SUPABASE_URL"
+    - "SUPABASE_SERVICE_ROLE_KEY"
+    - "JWT_SECRET"
